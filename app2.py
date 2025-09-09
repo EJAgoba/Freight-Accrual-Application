@@ -231,7 +231,7 @@ else:
 
     with c1:
 
-        batch_num = st.text_input("Batch Number", placeholder="e.g., 27 or 27B").strip()
+        batch_num = st.text_input("Batch Number").strip()
 
     with c2:
 
@@ -395,4 +395,5 @@ st.download_button(
 
 )
  
+
 
