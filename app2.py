@@ -55,6 +55,7 @@ LOCATION_CODES_CANDIDATES = [
    "LOCATION_CODES.xlsx",
    "location_codes.xlsx",
    "LocationCodes.xlsx",
+   "all_location_codes.xlsx
 ]
 # ========= Helpers =========
 def _read_excel_here(filename: str) -> pd.DataFrame:
@@ -300,4 +301,5 @@ st.markdown(
 </div>
    """,
    unsafe_allow_html=True,)
+
 
