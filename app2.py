@@ -188,119 +188,211 @@ def run_pipeline(accrual_df: pd.DataFrame,
    return accrual_df
 
 # ========= Dynamic UI: Accrual vs Weekly Audit =========
+
 st.markdown("### What file are you processing?")
+
 file_kind = st.radio("Select one:", ["Accrual", "Weekly Audit"], horizontal=True)
+
 today = dt.date.today()
+
 if file_kind == "Accrual":
-   # default to previous month
-   prev_month = (today.replace(day=1) - dt.timedelta(days=1))
-   years  = list(range(today.year - 3, today.year + 2))
-   months = list(range(1, 12 + 1))
-   c1, c2 = st.columns(2)
-   with c1:
-       sel_year = st.selectbox("Year", years, index=years.index(prev_month.year))
-   with c2:
-       sel_month = st.selectbox(
-           "Month",
-           months,
-           format_func=lambda m: calendar.month_abbr[m],
-           index=prev_month.month - 1
-       )
+
+    # default to previous month
+
+    prev_month = (today.replace(day=1) - dt.timedelta(days=1))
+
+    years  = list(range(today.year - 3, today.year + 2))
+
+    months = list(range(1, 13))
+
+    c1, c2 = st.columns(2)
+
+    with c1:
+
+        sel_year = st.selectbox("Year", years, index=years.index(prev_month.year))
+
+    with c2:
+
+        sel_month = st.selectbox(
+
+            "Month", months,
+
+            format_func=lambda m: calendar.month_abbr[m],
+
+            index=prev_month.month - 1
+
+        )
+
+    upload_types = ["xlsx"]
+
 else:
-   c1, c2 = st.columns(2)
-   with c1:
-       batch_num = st.text_input("Batch Number", placeholder="e.g., 27 or 27B").strip()
-   with c2:
-       week_of_month = st.selectbox("Week of Month", [1, 2, 3, 4, 5], index=0)
+
+    c1, c2 = st.columns(2)
+
+    with c1:
+
+        batch_num = st.text_input("Batch Number", placeholder="e.g., 27 or 27B").strip()
+
+    with c2:
+
+        week_of_month = st.selectbox("Week of Month", [1, 2, 3, 4, 5], index=0)
+
+    # Weekly Audit can come as text or csv too
+
+    upload_types = ["txt", "text", "csv", "xlsx"]
+
 st.markdown("### Upload workbook")
-file = st.file_uploader("Select an Excel file (.xlsx)", type=["xlsx"])
-# ======== If any reference missing, offer upload fallbacks (non-blocking) ========
-missing_msgs = []
-for fname in [*LOCATION_CODES_CANDIDATES, CINTAS_LOCATION_TABLE_FILE, COMPLETE_LOCATION_TABLE_FILE]:
-   p = Path(__file__).with_name(fname)
-   if fname in LOCATION_CODES_CANDIDATES and p.exists():
-       break
-else:
-   # No location codes file found
-   st.warning(
-       f"Location Codes Excel not found. Please upload it here (it will be used for this session only). "
-       f"Expected one of: {', '.join(LOCATION_CODES_CANDIDATES)}"
-   )
-   loc_upload = st.file_uploader("Upload Location Codes Excel", type=["xlsx"], key="loc_codes_upl")
-   if loc_upload is not None:
-       # Save temporarily for this run
-       tmp_path = Path("tmp_location_codes.xlsx")
-       with open(tmp_path, "wb") as f:
-           f.write(loc_upload.read())
-       LOCATION_CODES_CANDIDATES.insert(0, str(tmp_path))  # first in list to be picked
-for req in [CINTAS_LOCATION_TABLE_FILE, COMPLETE_LOCATION_TABLE_FILE]:
-   if not Path(__file__).with_name(req).exists():
-       st.warning(f"Missing '{req}'. Upload it here (used for this session only).")
-       upl = st.file_uploader(f"Upload {req}", type=["xlsx"], key=f"upl_{req}")
-       if upl is not None:
-           with open(req, "wb") as f:
-               f.write(upl.read())
+
+file = st.file_uploader("Select a file", type=upload_types)
+
+# ---------- helper: read uploaded file into DataFrame ----------
+
+import csv
+
+def _read_weekly_text_to_df(ufile) -> pd.DataFrame:
+
+    """
+
+    Convert uploaded .txt/.csv into a DataFrame.
+
+    Auto-detects delimiter, preserves all fields as strings.
+
+    """
+
+    # Peek a sample for delimiter sniffing
+
+    sample = ufile.read(4096)
+
+    ufile.seek(0)
+
+    try:
+
+        sniff = csv.Sniffer().sniff(sample.decode("utf-8", errors="ignore"))
+
+        sep = sniff.delimiter
+
+    except Exception:
+
+        # common fallbacks
+
+        sep = "\t" if b"\t" in sample else ","
+
+    return pd.read_csv(ufile, sep=sep, dtype=str, engine="python", encoding="utf-8", keep_default_na=False)
+
+def _read_uploaded(file, kind: str) -> pd.DataFrame:
+
+    name = (file.name or "").lower()
+
+    if kind == "Accrual":
+
+        return pd.read_excel(file)  # your accrual is xlsx
+
+    # Weekly Audit
+
+    if name.endswith((".txt", ".text", ".csv")):
+
+        return _read_weekly_text_to_df(file)
+
+    else:
+
+        return pd.read_excel(file)  # allow xlsx for weekly too
+
+# ======== Missing-reference upload fallback (unchanged except shown names) ========
+
+# (keep your existing reference-upload block here)
+
 # ========= Auto-run once a file is uploaded =========
+
 if file is None:
-   st.info("Select the options above, then upload your workbook (.xlsx).")
-   st.stop()
+
+    st.info(f"Upload your {'Accrual .xlsx' if file_kind=='Accrual' else 'Weekly Audit (.txt/.csv/.xlsx)'} file.")
+
+    st.stop()
+
 # Read upload
+
 try:
-   input_df = pd.read_excel(file)
+
+    input_df = _read_uploaded(file, file_kind)
+
 except Exception as e:
-   st.error(f"Could not read the uploaded workbook: {e}")
-   st.stop()
+
+    st.error(f"Could not read the uploaded file: {e}")
+
+    st.stop()
+
 st.info(f"Loaded **{len(input_df):,}** rows. Processing automatically…")
+
 # Load references & run
+
 try:
-   location_codes, cintas_loc_tbl, complete_loc_tbl = load_reference_tables()
+
+    location_codes, cintas_loc_tbl, complete_loc_tbl = load_reference_tables()
+
 except Exception as e:
-   st.error(f"Reference load error: {e}")
-   st.stop()
+
+    st.error(f"Reference load error: {e}")
+
+    st.stop()
+
 with st.spinner("Running accrual re-coding…"):
-   try:
-       result_df = run_pipeline(input_df.copy(), cintas_loc_tbl, complete_loc_tbl, location_codes)
-   except Exception as e:
-       st.error(f"Pipeline error: {e}")
-       st.stop()
+
+    try:
+
+        result_df = run_pipeline(input_df.copy(), cintas_loc_tbl, complete_loc_tbl, location_codes)
+
+    except Exception as e:
+
+        st.error(f"Pipeline error: {e}")
+
+        st.stop()
+
 st.success(f"Done! Processed **{len(result_df):,}** rows.")
+
 # ========= Build filenames from choices =========
+
 if file_kind == "Accrual":
-   mon_label = f"{calendar.month_abbr[sel_month]}-{sel_year}"
-   base_name = f"Accrual {mon_label}"
+
+    mon_label = f"{calendar.month_abbr[sel_month]}-{sel_year}"
+
+    base_name = f"Accrual {mon_label}"
+
 else:
-   mon_label = f"{calendar.month_abbr[today.month]}-{today.year}"
-   wlabel = f"W{week_of_month}"
-   b = batch_num or "NA"
-   base_name = f"Weekly Audit Batch {b} {mon_label}-{wlabel}"
+
+    mon_label = f"{calendar.month_abbr[today.month]}-{today.year}"
+
+    base_name = f"Weekly Audit Batch {batch_num or 'NA'} {mon_label}-W{week_of_month}"
+
 xlsx_name = f"{base_name}.xlsx"
+
 csv_name  = f"{base_name}.csv"
-# ========= Downloads (ALL rows) =========
+
+# ========= Downloads =========
+
 xls_bytes = _try_export_excel(result_df)
-st.download_button(
-   "⬇️ Download Excel (all rows)",
-   data=xls_bytes,
-   file_name=xlsx_name,
-   mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-)
-st.download_button(
-   "⬇️ Download CSV (all rows)",
-   data=result_df.to_csv(index=False).encode("utf-8"),
-   file_name=csv_name,
-   mime="text/csv",
-)
-# Footer notes
-st.markdown(
-   """
-<div class="cintas-card" style="margin-top:10px;">
-<strong>Notes</strong><br>
-     • Reads three references from this folder: <em>Location Codes Excel</em>, <code>MY LOCATION TABLE.xlsx</code>,
-       and <code>Coding_CintasLocation 02.06.25.xlsx</code>.<br>
-     • If any are missing, you can upload them above for this session.<br>
-     • Duplicate removal uses <code>Invoice Number</code> + <code>Paid Amount</code> when both columns exist.
-</div>
-   """,
-   unsafe_allow_html=True,)
 
+st.download_button(
 
+    "⬇️ Download Excel (all rows)",
+
+    data=xls_bytes,
+
+    file_name=xlsx_name,
+
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+
+)
+
+st.download_button(
+
+    "⬇️ Download CSV (all rows)",
+
+    data=result_df.to_csv(index=False).encode("utf-8"),
+
+    file_name=csv_name,
+
+    mime="text/csv",
+
+)
+ 
 
