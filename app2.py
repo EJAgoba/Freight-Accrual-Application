@@ -299,4 +299,5 @@ st.markdown(
      • Duplicate removal uses <code>Invoice Number</code> + <code>Paid Amount</code> when both columns exist.
 </div>
    """,
-   unsafe_allow_html=True,
+   unsafe_allow_html=True,)
+
