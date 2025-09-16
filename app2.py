@@ -277,7 +277,7 @@ def _read_weekly_text_to_df(ufile) -> pd.DataFrame:
 
         sep = "\t" if b"\t" in sample else ","
 
-    return pd.read_csv(ufile, sep=sep, dtype=str, engine="python", encoding="utf-8", keep_default_na=False)
+    return pd.read_csv(ufile, sep=sep, dtype=str, engine="python", encoding="latin1", keep_default_na=False)
 
 def _read_uploaded(file, kind: str) -> pd.DataFrame:
 
@@ -395,5 +395,6 @@ st.download_button(
 
 )
  
+
 
 
