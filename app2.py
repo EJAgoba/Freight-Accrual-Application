@@ -188,11 +188,6 @@ def run_pipeline(accrual_df: pd.DataFrame,
    # Ensure Profit Center and Profit Center EJ are strings
    accrual_df['Profit Center'] = accrual_df['Profit Center'].astype(str)
    accrual_df['Profit Center EJ'] = accrual_df['Profit Center EJ'].astype(str)
-   # Create new column: automation accuracy
-   accrual_df['Automation Accuracy'] = accrual_df.apply(
-      lambda row: 1 if row['Profit Center'] == row['Profit Center EJ'] else 0,
-      axis=1
-   )   
    return accrual_df
 
 # ========= Dynamic UI: Accrual vs Weekly Audit =========
@@ -403,6 +398,7 @@ st.download_button(
 
 )
  
+
 
 
 
