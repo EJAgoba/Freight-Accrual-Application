@@ -35,6 +35,11 @@ class Extractor:
             dest_vals = df[dest_col].astype(str).str.strip().str.upper()
             mask_dest_valid = dest_vals.isin(locset)
             df.loc[mask_dest_valid, 'Consignee Code'] = dest_vals
+        if has_org and has_dest:
+            df['Automation Accuracy'] = df.apply(
+      lambda row: 1 if row['Profit Center'] == row['Profit Center EJ'] else 0,
+      axis=1
+   )   
 
         return has_org or has_dest
 
@@ -99,5 +104,6 @@ class Extractor:
 #         df.loc[mask, new_column] = df.loc[mask, column1].astype(str).str.extract(search_pattern, expand=False)
 
 #         df[new_column] = df[new_column].replace("", np.nan)
+
 
     
