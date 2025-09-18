@@ -180,8 +180,8 @@ def run_pipeline(accrual_df: pd.DataFrame,
    if {'Invoice Number', 'Paid Amount'}.issubset(accrual_df.columns):
        accrual_df = accrual_df.drop_duplicates(subset=['Invoice Number', 'Paid Amount'])
    # Ensure Profit Center and Profit Center EJ are strings
-   accrual_df['Profit Center'] = accrual_df['Profit Center'].astype(str)
-   accrual_df['Profit Center EJ'] = accrual_df['Profit Center EJ'].astype(str)
+   accrual_df['Profit Center'] = accrual_df['Profit Center'].astype("string")
+   accrual_df['Profit Center EJ'] = accrual_df['Profit Center EJ'].astype("string")
    accrual_df['Automation Accuracy'] = accrual_df.apply(lambda row: 1 if row['Profit Center'] == row['Profit Center EJ'] else 0, axis=1)
    # --- Column ordering (if present) ---
    first_cols = [
@@ -400,6 +400,7 @@ st.download_button(
 
 )
  
+
 
 
 
