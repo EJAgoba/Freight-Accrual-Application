@@ -36,10 +36,7 @@ class Extractor:
             mask_dest_valid = dest_vals.isin(locset)
             df.loc[mask_dest_valid, 'Consignee Code'] = dest_vals
         if has_org and has_dest:
-            df['Automation Accuracy'] = df.apply(
-      lambda row: 1 if row['Profit Center'] == row['Profit Center EJ'] else 0,
-      axis=1
-   )   
+            df['Automation Accuracy'] = df.apply(lambda row: 1 if row['Profit Center'] == row['Profit Center EJ'] else 0, axis=1)   
 
         return has_org or has_dest
 
@@ -107,3 +104,4 @@ class Extractor:
 
 
     
+
