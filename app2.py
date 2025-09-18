@@ -185,7 +185,7 @@ def run_pipeline(accrual_df: pd.DataFrame,
    accrual_df['Automation Accuracy'] = accrual_df.apply(lambda row: 1 if row['Profit Center'] == row['Profit Center EJ'] else 0, axis=1)
    # --- Column ordering (if present) ---
    first_cols = [
-       'Profit Center', 'Cost Center', 'Account #','Automation Accuracy'
+       'Profit Center', 'Cost Center', 'Account #','Automation Accuracy',
        'Profit Center EJ', 'Cost Center EJ', 'Account # EJ'
    ]
    ordered = [c for c in first_cols if c in accrual_df.columns] + [c for c in accrual_df.columns if c not in first_cols]
@@ -400,6 +400,7 @@ st.download_button(
 
 )
  
+
 
 
 
