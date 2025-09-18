@@ -182,7 +182,7 @@ def run_pipeline(accrual_df: pd.DataFrame,
    # Ensure Profit Center and Profit Center EJ are strings
    accrual_df['Profit Center'] = accrual_df['Profit Center'].astype("string")
    accrual_df['Profit Center EJ'] = accrual_df['Profit Center EJ'].astype("string")
-   accrual_df['Automation Accuracy'] = accrual_df.apply(lambda row: 1 if row['Profit Center'] == row['Profit Center EJ'] else 0, axis=1)
+   accrual_df['Automation Accuracy'] = accrual_df.apply(lambda row: (1 if (pd.notna(row['Profit Center']) and pd.notna(row['Profit Center EJ']) and row['Profit Center'] == row['Profit Center EJ']) else 0), axis=1)
    # --- Column ordering (if present) ---
    first_cols = [
        'Profit Center', 'Cost Center', 'Account #','Automation Accuracy',
@@ -400,6 +400,7 @@ st.download_button(
 
 )
  
+
 
 
 
