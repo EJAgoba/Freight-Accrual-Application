@@ -399,7 +399,121 @@ st.download_button(
     mime="text/csv",
 
 )
- 
+
+
+# ================== Weekly Audit -> Accounting Summary ==================
+def _mode_safe(series: pd.Series):
+    try:
+        return series.mode().iloc[0]
+    except Exception:
+        return series.dropna().iloc[0] if len(series.dropna()) else None
+
+def weekly_audit_to_accounting_sheets(df: pd.DataFrame) -> dict[str, pd.DataFrame]:
+    """
+    Implements the 7 handwritten steps to produce two sheets: USD & CAD.
+    Returns a dict: {"USD": usd_df, "CAD": cad_df}
+    """
+
+    # Required columns (soft checks; raise clear error if missing)
+    needed = ["Run Number", "Profit Center", "Cost Center", "Account #", "Currency", "Amount"]
+    missing = [c for c in needed if c not in df.columns]
+    if missing:
+        raise ValueError(f"Weekly Audit summary requires columns: {needed}. Missing: {missing}")
+
+    # Work only with the columns you specified
+    work = df[needed].copy()
+
+    # Ensure types
+    work["Profit Center"] = work["Profit Center"].astype(str).str.strip()
+    work["Cost Center"]   = work["Cost Center"].astype(str).str.strip()
+    work["Account #"]     = work["Account #"].astype(str).str.strip()
+    work["Currency"]      = work["Currency"].astype(str).str.upper().str.strip()
+
+    # Amount numeric, coerce bad values to 0
+    work["Amount"] = pd.to_numeric(work["Amount"], errors="coerce").fillna(0.0)
+
+    # 1) Group by Profit Center, Cost Center, Account #
+    grouped = (
+        work
+        .groupby(["Profit Center", "Cost Center", "Account #", "Currency"], dropna=False, as_index=False)["Amount"]
+        .sum()
+    )
+
+    # 3) Add three empty columns
+    for blank_col in ["Order", "Segment", "Bus. Area"]:
+        grouped[blank_col] = ""
+
+    # 2) Keep Run Number (use the batch mode) – same value for the whole sheet
+    run_number_value = _mode_safe(work["Run Number"])
+    grouped["Run Number"] = run_number_value
+
+    # 6) Re-order columns to your exact order
+    final_cols = [
+        "Run Number", "Profit Center", "Cost Center", "Order",
+        "Account #", "Bus. Area", "Segment", "Currency", "Amount"
+    ]
+    grouped = grouped[final_cols]
+
+    # Helper to build each currency sheet with the header row
+    def build_currency_sheet(cur: str) -> pd.DataFrame:
+        cur_up = cur.upper()
+        g = grouped[grouped["Currency"] == cur_up].copy()
+
+        # 4) Negative sum of the batch for this currency
+        neg_sum = -float(g["Amount"].sum())
+
+        # 5) Add the top row with your constants
+        top_row = {
+            "Run Number": run_number_value,
+            "Profit Center": "686",
+            "Cost Center": "240400",
+            "Order": "",
+            "Account #": "",
+            "Bus. Area": "",
+            "Segment": "",
+            "Currency": cur_up,
+            "Amount": neg_sum
+        }
+
+        # Insert at the very beginning
+        g = pd.concat([pd.DataFrame([top_row]), g], ignore_index=True)
+
+        # Optional: sort after the header if you ever want a stable order (keeps first row fixed)
+        # g = pd.concat([g.iloc[[0]], g.iloc[1:].sort_values(["Profit Center","Cost Center","Account #"])], ignore_index=True)
+
+        return g
+
+    return {
+        "USD": build_currency_sheet("USD"),
+        "CAD": build_currency_sheet("CAD"),
+    }
+
+# ================== Hook into your existing flow ==================
+# After you've computed `result_df` and only for Weekly Audit, create the accounting workbook.
+if file_kind == "Weekly Audit":
+    try:
+        sheets = weekly_audit_to_accounting_sheets(result_df.copy())
+        # Build a single Excel bytes object with two sheets (USD & CAD)
+        bio_acc = io.BytesIO()
+        with pd.ExcelWriter(bio_acc, engine="xlsxwriter") as w:
+            sheets["USD"].to_excel(w, index=False, sheet_name="USD")
+            sheets["CAD"].to_excel(w, index=False, sheet_name="CAD")
+        bio_acc.seek(0)
+        accounting_bytes = bio_acc.read()
+
+        acct_name = f"{base_name} - Accounting Summary.xlsx"
+        st.download_button(
+            "⬇️ Download Accounting Summary (USD & CAD)",
+            data=accounting_bytes,
+            file_name=acct_name,
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            help="Creates two tabs (USD & CAD) per your month-end rules with a top balancing row."
+        )
+    except Exception as e:
+        st.error(f"Weekly Audit accounting summary failed: {e}")
+
+
+
 
 
 
