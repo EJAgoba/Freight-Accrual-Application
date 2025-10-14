@@ -402,82 +402,63 @@ st.download_button(
 
 
 
-# ================== Weekly Audit -> Accounting Summary ==================
+# ================== Weekly Audit -> Accounting Summary (with edited-file reattach) ==================
 
 def weekly_audit_to_accounting_sheets(df: pd.DataFrame) -> dict[str, pd.DataFrame]:
     """
-    Implements the 7 handwritten steps to produce two sheets: USD & CAD.
+    Your 7-step month-end rules.
     Renames 'RunNumber' -> 'Run Number' and 'Paid Amount' -> 'Amount'.
     """
-
-    # --- Step 0: Normalize column names for this workflow ---
+    # Normalize the two key headers + common ones
     rename_map = {}
     for col in df.columns:
-        col_clean = col.strip().lower().replace("  ", " ")
-        if col_clean == "runnumber":
+        key = col.strip().lower()
+        if key == "runnumber":
             rename_map[col] = "Run Number"
-        elif col_clean == "paid amount":
+        elif key == "paid amount":
             rename_map[col] = "Amount"
-        elif col_clean == "profit center":
+        elif key == "profit center":
             rename_map[col] = "Profit Center"
-        elif col_clean == "cost center":
+        elif key == "cost center":
             rename_map[col] = "Cost Center"
-        elif col_clean == "account #":
+        elif key in ("account #", "account"):
             rename_map[col] = "Account #"
-        elif col_clean == "currency":
+        elif key == "currency":
             rename_map[col] = "Currency"
-
     df = df.rename(columns=rename_map)
 
-    # --- Verify all required columns are now present ---
     needed = ["Run Number", "Profit Center", "Cost Center", "Account #", "Currency", "Amount"]
     missing = [c for c in needed if c not in df.columns]
     if missing:
         raise ValueError(f"Weekly Audit summary requires columns: {needed}. Missing: {missing}")
 
-    # --- Start applying your 7 handwritten rules ---
     work = df[needed].copy()
-
-    # Ensure proper datatypes
     work["Profit Center"] = work["Profit Center"].astype(str).str.strip()
-    work["Cost Center"] = work["Cost Center"].astype(str).str.strip()
-    work["Account #"] = work["Account #"].astype(str).str.strip()
-    work["Currency"] = work["Currency"].astype(str).str.upper().str.strip()
+    work["Cost Center"]   = work["Cost Center"].astype(str).str.strip()
+    work["Account #"]     = work["Account #"].astype(str).str.strip()
+    work["Currency"]      = work["Currency"].astype(str).str.upper().str.strip()
+    work["Amount"] = pd.to_numeric(
+        work["Amount"].astype(str).str.replace("(", "-", regex=False).str.replace(")", "", regex=False),
+        errors="coerce"
+    ).fillna(0.0)
 
-    work["Amount"] = (
-        pd.to_numeric(work["Amount"].replace(r"[()]", "", regex=True), errors="coerce")
-        .fillna(0.0)
-    )
-
-    # (1) Group by Profit Center, Cost Center, Account #
     grouped = (
         work.groupby(["Profit Center", "Cost Center", "Account #", "Currency"], dropna=False, as_index=False)["Amount"]
         .sum()
     )
+    for c in ["Order", "Segment", "Bus. Area"]:
+        grouped[c] = ""
 
-    # (3) Add empty columns
-    for col in ["Order", "Segment", "Bus. Area"]:
-        grouped[col] = ""
-
-    # (2) Keep run number mode
     run_number_value = work["Run Number"].mode().iloc[0] if not work["Run Number"].mode().empty else ""
     grouped["Run Number"] = run_number_value
 
-    # (6) Re-order columns
-    final_cols = [
-        "Run Number", "Profit Center", "Cost Center", "Order",
-        "Account #", "Bus. Area", "Segment", "Currency", "Amount"
-    ]
+    final_cols = ["Run Number", "Profit Center", "Cost Center", "Order",
+                  "Account #", "Bus. Area", "Segment", "Currency", "Amount"]
     grouped = grouped[final_cols]
 
-    # Helper: Build USD/CAD sheet + top header row
     def build_currency_sheet(cur: str) -> pd.DataFrame:
         g = grouped[grouped["Currency"] == cur.upper()].copy()
-
-        # (4) Negative sum of batch per currency
         neg_sum = -float(g["Amount"].sum())
-
-        # (5) Insert top row
         top_row = {
             "Run Number": run_number_value,
             "Profit Center": "686",
@@ -489,32 +470,62 @@ def weekly_audit_to_accounting_sheets(df: pd.DataFrame) -> dict[str, pd.DataFram
             "Currency": cur.upper(),
             "Amount": neg_sum,
         }
-        g = pd.concat([pd.DataFrame([top_row]), g], ignore_index=True)
-        return g
+        return pd.concat([pd.DataFrame([top_row]), g], ignore_index=True)
 
-    # (7) Two sheets — USD & CAD
     return {"USD": build_currency_sheet("USD"), "CAD": build_currency_sheet("CAD")}
 
-
-# ================== Hook into your existing flow ==================
+# --- UI to reattach edited Weekly Audit file ---
 if file_kind == "Weekly Audit":
-    try:
-        sheets = weekly_audit_to_accounting_sheets(result_df.copy())
+    st.markdown("### Attach edited Weekly Audit file (optional)")
+    edited_file = st.file_uploader(
+        "Drop your manually edited Weekly Audit file here (.xlsx, .csv, .txt)",
+        type=["xlsx", "csv", "txt", "text"],
+        key="edited_weekly_audit"
+    )
 
-        bio_acc = io.BytesIO()
-        with pd.ExcelWriter(bio_acc, engine="xlsxwriter") as writer:
-            for name, sheet in sheets.items():
-                sheet.to_excel(writer, index=False, sheet_name=name)
-        bio_acc.seek(0)
-        accounting_bytes = bio_acc.read()
+    # Helper to read the edited file using your existing logic
+    def _read_edited(ufile):
+        name = (ufile.name or "").lower()
+        if name.endswith((".txt", ".text", ".csv")):
+            return _read_weekly_text_to_df(ufile)
+        return pd.read_excel(ufile)
 
-        acct_name = f"{base_name} - Accounting Summary.xlsx"
-        st.download_button(
-            "⬇️ Download Accounting Summary (USD & CAD)",
-            data=accounting_bytes,
-            file_name=acct_name,
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            help="Creates two tabs (USD & CAD) per your month-end rules with a top balancing row."
-        )
-    except Exception as e:
-        st.error(f"Weekly Audit accounting summary failed: {e}")
+    # If edited file provided, build from it; else allow building from current processed rows
+    source_df = None
+    source_label = ""
+    if edited_file is not None:
+        try:
+            source_df = _read_edited(edited_file)
+            source_label = "Edited"
+            st.success(f"Edited file loaded: {len(source_df):,} rows.")
+        except Exception as e:
+            st.error(f"Couldn't read the edited file: {e}")
+
+    else:
+        # Optional button to generate from the in-app processed data
+        if st.button("Or build accounting summary from the current processed rows"):
+            source_df = result_df.copy()
+            source_label = "From Current"
+        else:
+            st.info("Attach your edited file, or click the button above to use the current processed rows.")
+
+    if source_df is not None:
+        try:
+            sheets = weekly_audit_to_accounting_sheets(source_df)
+            bio_acc = io.BytesIO()
+            with pd.ExcelWriter(bio_acc, engine="xlsxwriter") as writer:
+                for name, sheet in sheets.items():
+                    sheet.to_excel(writer, index=False, sheet_name=name)
+            bio_acc.seek(0)
+            accounting_bytes = bio_acc.read()
+
+            acct_name = f"{base_name} - Accounting Summary ({source_label}).xlsx"
+            st.download_button(
+                "⬇️ Download Accounting Summary (USD & CAD)",
+                data=accounting_bytes,
+                file_name=acct_name,
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                help="Builds two tabs (USD & CAD) from your edited Weekly Audit file, following the month-end rules."
+            )
+        except Exception as e:
+            st.error(f"Weekly Audit accounting summary failed: {e}")
