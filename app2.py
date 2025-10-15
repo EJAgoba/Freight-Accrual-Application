@@ -466,7 +466,7 @@ def _build_currency_sheet(df: pd.DataFrame, force_currency: str, selected_run: s
        base["Amount"].astype(str).str.replace("(", "-", regex=False).str.replace(")", "", regex=False),
        errors="coerce"
    ).fillna(0.0).round(2)
-   # ----- Tax expansion rows (GST/PST, HST, QST) -----
+  # ----- Tax expansion rows (GST/PST, HST, QST) -----
    tax_specs = [
        ("GST/PST Paid", "GST/PST Account #", "203063"),
        ("HST Paid",     "HST Account #",     "203064"),
@@ -475,18 +475,28 @@ def _build_currency_sheet(df: pd.DataFrame, force_currency: str, selected_run: s
    tax_frames = []
    for paid_col, acct_col, default_acct in tax_specs:
        if paid_col in df.columns:
-           # numeric amount; keep non-zero
+           # Make sure we're working with a simple Series, not nested DataFrame
+           paid_series = df[paid_col]
+           if isinstance(paid_series, pd.DataFrame):
+               paid_series = paid_series.iloc[:, 0]
+           # Convert Paid to numeric
            amt = pd.to_numeric(
-               df[paid_col].astype(str).str.replace("(", "-", regex=False).str.replace(")", "", regex=False),
+               paid_series.astype(str)
+                   .str.replace("(", "-", regex=False)
+                   .str.replace(")", "", regex=False),
                errors="coerce"
            ).fillna(0.0).round(2)
            mask = amt != 0
            if mask.any():
-               acct_series = (
-                   df[acct_col].astype(str).str.strip()
-                   if acct_col in df.columns else pd.Series([default_acct] * len(df), index=df.index)
-               )
-               # if account # is blank/null, use default
+               # Account # column — ensure Series, clean, fallback to default
+               if acct_col in df.columns:
+                   acct_series = df[acct_col]
+                   if isinstance(acct_series, pd.DataFrame):
+                       acct_series = acct_series.iloc[:, 0]
+                   acct_series = acct_series.astype(str).str.strip()
+               else:
+                   acct_series = pd.Series([default_acct] * len(df), index=df.index)
+               # Replace blanks or NA with default
                acct_series = acct_series.where(acct_series.replace("", pd.NA).notna(), other=default_acct)
                tax_rows = pd.DataFrame({
                    "Run Number": _clean_run_str(df.loc[mask, "Run Number"]),
@@ -607,6 +617,7 @@ if file_kind == "Weekly Audit":
            )
        except Exception as e:
            st.error(f"Weekly Audit accounting summary failed: {e}")
+
 
 
 
