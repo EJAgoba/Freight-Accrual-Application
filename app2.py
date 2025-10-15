@@ -550,7 +550,7 @@ if file_kind == "Weekly Audit":
            usd_df = result_df.copy()
            cad_df = result_df.copy()
        else:
-           st.info("Attach your edited .xlsx with 'USD'/'USA' and 'CAD' tabs, or click the button to use current rows.")
+           st.info("Attach your edited batch file with 'USD' and 'CAD' tabs, or click the button to use current rows.")
    # === Apply batch filter using your UI input ===
    selected_run = (batch_num or "").strip()  # <- this is the value you typed in the Batch Number box
    if usd_df is not None and cad_df is not None:
@@ -573,3 +573,4 @@ if file_kind == "Weekly Audit":
            )
        except Exception as e:
            st.error(f"Weekly Audit accounting summary failed: {e}")
+
