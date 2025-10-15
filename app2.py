@@ -433,11 +433,13 @@ def _clean_run_str(s: pd.Series) -> pd.Series:
 def _build_currency_sheet(df: pd.DataFrame, force_currency: str, selected_run: str | None) -> pd.DataFrame:
    """
    Apply your 7 steps to ONE sheet's data.
-   selected_run: filter Run Number to this value (string). If None, use mode.
+   Adds tax-expansion rows for GST/PST, HST, QST when their Paid columns are non-zero.
+   - 240400 goes under Account # in the top balancing row
+   - Amount rounded to 2 decimals
    """
    df = _normalize_headers(df.copy())
-   needed = ["Run Number", "Profit Center", "Cost Center", "Account #", "Amount"]
-   missing = [c for c in needed if c not in df.columns]
+   needed_min = ["Run Number", "Profit Center", "Cost Center", "Account #", "Amount"]
+   missing = [c for c in needed_min if c not in df.columns]
    if missing:
        raise ValueError(f"Edited sheet is missing columns: {missing}")
    # Ensure/force Currency
@@ -452,25 +454,55 @@ def _build_currency_sheet(df: pd.DataFrame, force_currency: str, selected_run: s
        df = df[df["Run Number"] == run_filter_val]
        if df.empty:
            raise ValueError(
-               f"No rows found for Run Number '{selected_run}'. "
-               f"Available runs in this sheet: {sorted(_clean_run_str(df['Run Number']).unique().tolist())}"
+               f"No rows found for Run Number '{selected_run}'."
            )
-   work = df[["Run Number","Profit Center","Cost Center","Account #","Currency","Amount"]].copy()
-   work["Profit Center"] = work["Profit Center"].astype(str).str.strip()
-   work["Cost Center"]   = work["Cost Center"].astype(str).str.strip()
-   work["Account #"]     = work["Account #"].astype(str).str.strip()
-   work["Currency"]      = work["Currency"].astype(str).str.upper().str.strip()
-   # Amount → numeric (handle parentheses), 2 decimals
-   work["Amount"] = pd.to_numeric(
-       work["Amount"].astype(str)
-                     .str.replace("(", "-", regex=False)
-                     .str.replace(")", "", regex=False),
+   # ----- Base rows (your primary Paid/Amount) -----
+   base = df[["Run Number","Profit Center","Cost Center","Account #","Currency","Amount"]].copy()
+   base["Profit Center"] = base["Profit Center"].astype(str).str.strip()
+   base["Cost Center"]   = base["Cost Center"].astype(str).str.strip()
+   base["Account #"]     = base["Account #"].astype(str).str.strip()
+   base["Currency"]      = base["Currency"].astype(str).str.upper().str.strip()
+   base["Amount"] = pd.to_numeric(
+       base["Amount"].astype(str).str.replace("(", "-", regex=False).str.replace(")", "", regex=False),
        errors="coerce"
    ).fillna(0.0).round(2)
-   # (1) Group by
+   # ----- Tax expansion rows (GST/PST, HST, QST) -----
+   tax_specs = [
+       ("GST/PST Paid", "GST/PST Account #", "203063"),
+       ("HST Paid",     "HST Account #",     "203064"),
+       ("QST Paid",     "QST Account #",     "203065"),
+   ]
+   tax_frames = []
+   for paid_col, acct_col, default_acct in tax_specs:
+       if paid_col in df.columns:
+           # numeric amount; keep non-zero
+           amt = pd.to_numeric(
+               df[paid_col].astype(str).str.replace("(", "-", regex=False).str.replace(")", "", regex=False),
+               errors="coerce"
+           ).fillna(0.0).round(2)
+           mask = amt != 0
+           if mask.any():
+               acct_series = (
+                   df[acct_col].astype(str).str.strip()
+                   if acct_col in df.columns else pd.Series([default_acct] * len(df), index=df.index)
+               )
+               # if account # is blank/null, use default
+               acct_series = acct_series.where(acct_series.replace("", pd.NA).notna(), other=default_acct)
+               tax_rows = pd.DataFrame({
+                   "Run Number": _clean_run_str(df.loc[mask, "Run Number"]),
+                   "Profit Center": df.loc[mask, "Profit Center"].astype(str).str.strip(),
+                   "Cost Center": df.loc[mask, "Cost Center"].astype(str).str.strip(),
+                   "Account #": acct_series.loc[mask].astype(str).str.strip(),
+                   "Currency": force_currency,
+                   "Amount": amt.loc[mask].round(2)
+               })
+               tax_frames.append(tax_rows)
+   # Combine base + taxes
+   combined = pd.concat([base] + tax_frames, ignore_index=True) if tax_frames else base
+   # (1) Group by Profit Center, Cost Center, Account #
    grouped = (
-       work.groupby(["Profit Center","Cost Center","Account #","Currency"], dropna=False, as_index=False)["Amount"]
-           .sum()
+       combined.groupby(["Profit Center","Cost Center","Account #","Currency"], dropna=False, as_index=False)["Amount"]
+               .sum()
    )
    # (3) Add empties
    for col in ["Order","Segment","Bus. Area"]:
@@ -479,7 +511,7 @@ def _build_currency_sheet(df: pd.DataFrame, force_currency: str, selected_run: s
    if run_filter_val:
        run_number_value = run_filter_val
    else:
-       rn_mode = work["Run Number"].mode()
+       rn_mode = combined["Run Number"].mode()
        run_number_value = rn_mode.iloc[0] if not rn_mode.empty else ""
    grouped["Run Number"] = run_number_value
    # (6) Column order
@@ -575,6 +607,7 @@ if file_kind == "Weekly Audit":
            )
        except Exception as e:
            st.error(f"Weekly Audit accounting summary failed: {e}")
+
 
 
 
