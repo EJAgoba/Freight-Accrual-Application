@@ -412,7 +412,7 @@ def _normalize_headers(df: pd.DataFrame) -> pd.DataFrame:
        key = col.strip().lower()
        if key == "runnumber":
            rename_map[col] = "Run Number"
-       elif key in ("paid amount", "paid"):
+       elif key in ("total paid minus duty and cad tax"):
            rename_map[col] = "Amount"
        elif key == "profit center":
            rename_map[col] = "Profit Center"
@@ -575,5 +575,6 @@ if file_kind == "Weekly Audit":
            )
        except Exception as e:
            st.error(f"Weekly Audit accounting summary failed: {e}")
+
 
 
