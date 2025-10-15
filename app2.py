@@ -171,8 +171,10 @@ def run_pipeline(accrual_df: pd.DataFrame,
    )
    accrual_df.rename(columns={'Prof_Cntr': 'Profit Center EJ', 'Cost_Cntr': 'Cost Center EJ'}, inplace=True)
    # --- Account # EJ rule ---
+   # --- Account # EJ rule ---
    accrual_df['Account # EJ'] = accrual_df.apply(
-       lambda row: 621000 if row.get('Consignee Code') == row.get('Assigned Location Code') else 621020,
+       lambda row: 621000 if 'G59' in str(row.get('Profit Center EJ', '')) 
+       else (621000 if row.get('Consignee Code') == row.get('Assigned Location Code') else 621020),
        axis=1
    )
  
@@ -573,4 +575,5 @@ if file_kind == "Weekly Audit":
            )
        except Exception as e:
            st.error(f"Weekly Audit accounting summary failed: {e}")
+
 
