@@ -481,11 +481,11 @@ def _build_currency_sheet(df: pd.DataFrame, force_currency: str) -> pd.DataFrame
        "Amount": round(neg_sum, 2),   # ✅ 2 decimals
    }
    return pd.concat([pd.DataFrame([top_row]), grouped], ignore_index=True)
-# --- UI to reattach edited Weekly Audit file with USA & CAD tabs ---
+# --- UI to reattach edited Weekly Audit file with USD & CAD tabs ---
 if file_kind == "Weekly Audit":
    st.markdown("### Attach edited Weekly Audit file (optional)")
    edited_file = st.file_uploader(
-       "Drop your manually edited Weekly Audit file here (.xlsx preferred; expects 'USA' and 'CAD' tabs).",
+       "Drop your manually edited Weekly Audit file here (.xlsx preferred; expects 'USD' and 'CAD' tabs).",
        type=["xlsx", "csv", "txt", "text"],
        key="edited_weekly_audit_tabs"
    )
@@ -506,18 +506,18 @@ if file_kind == "Weekly Audit":
                xls: pd.ExcelFile = payload
                # Find sheets case-insensitively
                sheets_lower = {s.lower(): s for s in xls.sheet_names}
-               if "usa" in sheets_lower and "cad" in sheets_lower:
-                   usd_df = pd.read_excel(xls, sheets_lower["usa"])
+               if "usd" in sheets_lower and "cad" in sheets_lower:
+                   usd_df = pd.read_excel(xls, sheets_lower["usd"])
                    cad_df = pd.read_excel(xls, sheets_lower["cad"])
-                   source_label = "Edited (USA & CAD tabs)"
-                   st.success(f"Edited workbook loaded: USA rows = {len(usd_df):,}, CAD rows = {len(cad_df):,}.")
+                   source_label = "Edited (USD & CAD tabs)"
+                   st.success(f"Edited workbook loaded: USD rows = {len(usd_df):,}, CAD rows = {len(cad_df):,}.")
                else:
                    st.error("The edited workbook must contain sheets named 'USA' and 'CAD' (any case).")
            else:
                # Single-sheet fallback: build both from the same data by filtering Currency if present
                single_df: pd.DataFrame = payload
                source_label = "Edited (single sheet)"
-               st.warning("Edited file is not .xlsx with USA/CAD tabs; using single sheet instead.")
+               st.warning("Edited file is not .xlsx with USD/CAD tabs; using single sheet instead.")
                usd_df = single_df.copy()
                cad_df = single_df.copy()
        except Exception as e:
@@ -529,7 +529,7 @@ if file_kind == "Weekly Audit":
            usd_df = result_df.copy()
            cad_df = result_df.copy()
        else:
-           st.info("Attach your edited .xlsx with 'USA' and 'CAD' tabs, or click the button to use the current rows.")
+           st.info("Attach your edited .xlsx with 'USD' and 'CAD' tabs, or click the button to use the current rows.")
    # If we have data for both tabs, process and offer the download
    if usd_df is not None and cad_df is not None:
        try:
@@ -551,3 +551,4 @@ if file_kind == "Weekly Audit":
            )
        except Exception as e:
            st.error(f"Weekly Audit accounting summary failed: {e}")
+
