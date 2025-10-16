@@ -469,7 +469,7 @@ def _build_currency_sheet(df: pd.DataFrame, force_currency: str, selected_run: s
        ("GST/PST Paid", "GST/PST Account #", "203063"),
        ("HST Paid",     "HST Account #",     "203064"),
        ("QST Paid",     "QST Account #",     "203065"),
-       ("Duty Paid",    "Duty Account #",    "620010"),
+       ("Duty Paid",    "Duty Account #",    "621010"),
    ]
    tax_frames = []
    for paid_name, acct_name, default_acct in tax_specs:
@@ -552,4 +552,5 @@ if file_kind == "Weekly Audit":
                )
        except Exception as e:
            st.error(f"Weekly Audit accounting summary failed: {e}")
+
 
