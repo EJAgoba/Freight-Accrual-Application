@@ -419,31 +419,71 @@ def _clean_acct(series):
    s = s.str.replace(r"\..*$", "", regex=True)
    return s
 def _build_currency_sheet(df: pd.DataFrame, force_currency: str, selected_run: str | None) -> pd.DataFrame:
-   # Verify required columns exist
-   required = [
-       "RunNumber", "Profit Center", "Cost Center",
-       "Account #", "Currency", "Paid", "Total Paid Minus Duty and CAD Tax"
-   ]
-   for c in required:
-       if c not in df.columns:
-           raise ValueError(f"Edited sheet missing required column: '{c}'")
-   # Filter by RunNumber if provided
-   if selected_run:
-       df = df[df["RunNumber"].astype(str).str.strip() == str(selected_run).strip()]
-       if df.empty:
-           raise ValueError(f"No rows found for RunNumber {selected_run}")
-   # Base detail rows
-   base = pd.DataFrame({
-       "Run Number": df["RunNumber"].astype(str).str.strip(),
-       "Profit Center": df["Profit Center"].astype(str).str.strip(),
-       "Cost Center": df["Cost Center"].astype(str).str.strip(),
-       "Account #": _clean_acct(df["Account #"]),
-       "Currency": df["Currency"].astype(str).str.upper().str.strip(),
-       "Amount": _num(df["Total Paid Minus Duty and CAD Tax"]),
-   })
-   # Header negative total (Paid column only)
-   header_amount = round(-_num(df["Paid"]).sum(), 2)
-   header = {
+
+    # Verify required columns exist
+
+    required = [
+
+        "RunNumber", "Profit Center", "Cost Center",
+
+        "Account #", "Currency", "Total Paid Minus Duty and CAD Tax"
+
+    ]
+
+    for c in required:
+
+        if c not in df.columns:
+
+            raise ValueError(f"Edited sheet missing required column: '{c}'")
+
+    # Detect Paid column (either 'Paid' or 'Paid Amount')
+
+    paid_col = None
+
+    for candidate in ["Paid", "Paid Amount"]:
+
+        if candidate in df.columns:
+
+            paid_col = candidate
+
+            break
+
+    if not paid_col:
+
+        raise ValueError("Missing 'Paid' or 'Paid Amount' column — one of them must exist.")
+
+    # Filter by RunNumber if provided
+
+    if selected_run:
+
+        df = df[df["RunNumber"].astype(str).str.strip() == str(selected_run).strip()]
+
+        if df.empty:
+
+            raise ValueError(f"No rows found for RunNumber {selected_run}")
+
+    # Base detail rows
+
+    base = pd.DataFrame({
+
+        "Run Number": df["RunNumber"].astype(str).str.strip(),
+
+        "Profit Center": df["Profit Center"].astype(str).str.strip(),
+
+        "Cost Center": df["Cost Center"].astype(str).str.strip(),
+
+        "Account #": _clean_acct(df["Account #"]),
+
+        "Currency": df["Currency"].astype(str).str.upper().str.strip(),
+
+        "Amount": _num(df["Total Paid Minus Duty and CAD Tax"]),
+
+    })
+
+    # Header negative total (Paid/Paid Amount column)
+
+    header_amount = round(-_num(df[paid_col]).sum(), 2)
+    header = {
        "Run Number": str(selected_run or df["RunNumber"].iloc[0]),
        "Profit Center": "686",
        "Cost Center": "",
@@ -532,3 +572,4 @@ if file_kind == "Weekly Audit":
                )
            except Exception as e:
                st.error(f"Weekly Audit accounting summary failed: {e}")
+
