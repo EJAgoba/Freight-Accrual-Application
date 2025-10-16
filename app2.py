@@ -585,35 +585,35 @@ def _build_currency_sheet(df: pd.DataFrame, force_currency: str, selected_run: s
     })
 
 # ----- Tax & Duty expansion rows -----
-   # third element is a default account # (None => no default; use column as-is)
-   tax_specs = [
-       ("GST/PST Paid", "GST/PST Account #", "203063"),
-       ("HST Paid",     "HST Account #",     "203064"),
-       ("QST Paid",     "QST Account #",     "203065"),
-       ("Duty Paid",    "Duty Account #",    None),   # NEW: Duty
-   ]
-   tax_frames = []
-   for paid_col, acct_col, default_acct in tax_specs:
-       if paid_col in df.columns:
-           amt = _num(df[paid_col])
-           mask = amt != 0
-           if mask.any():
-               # Account # column — ensure Series; if default_acct is None we do NOT invent a number
-               if acct_col in df.columns:
-                   acct = _text(df[acct_col]).str.strip()
-               else:
-                   acct = pd.Series(["" if default_acct is None else default_acct] * len(df), index=df.index)
-               # If we DO have a default (GST/HST/QST), fill blanks with it; for Duty (None), leave blanks as-is
-               if default_acct is not None:
-                   acct = acct.where(acct.replace("", pd.NA).notna(), other=default_acct)
-               tax_frames.append(pd.DataFrame({
-                   "Run Number":  _clean_run_str(df.loc[mask, "Run Number"]),
-                   "Profit Center": _text(df.loc[mask, "Profit Center"]).str.strip(),
-                   "Cost Center":   _text(df.loc[mask, "Cost Center"]).str.strip(),
-                   "Account #":     _text(acct.loc[mask]).str.strip(),
-                   "Currency":      force_currency,
-                   "Amount":        amt.loc[mask].round(2),
-               }))
+# third element is a default account # (None => no default; use column as-is)
+tax_specs = [
+    ("GST/PST Paid", "GST/PST Account #", "203063"),
+    ("HST Paid",     "HST Account #",     "203064"),
+    ("QST Paid",     "QST Account #",     "203065"),
+    ("Duty Paid",    "Duty Account #",    None),   # NEW: Duty
+]
+tax_frames = []
+for paid_col, acct_col, default_acct in tax_specs:
+    if paid_col in df.columns:
+        amt = _num(df[paid_col])
+        mask = amt != 0
+        if mask.any():
+            # Account # column — ensure Series; if default_acct is None we do NOT invent a number
+            if acct_col in df.columns:
+                acct = _text(df[acct_col]).str.strip()
+            else:
+                acct = pd.Series(["" if default_acct is None else default_acct] * len(df), index=df.index)
+            # If we DO have a default (GST/HST/QST), fill blanks with it; for Duty (None), leave blanks as-is
+            if default_acct is not None:
+                acct = acct.where(acct.replace("", pd.NA).notna(), other=default_acct)
+            tax_frames.append(pd.DataFrame({
+                "Run Number":  _clean_run_str(df.loc[mask, "Run Number"]),
+                "Profit Center": _text(df.loc[mask, "Profit Center"]).str.strip(),
+                "Cost Center":   _text(df.loc[mask, "Cost Center"]).str.strip(),
+                "Account #":     _text(acct.loc[mask]).str.strip(),
+                "Currency":      force_currency,
+                "Amount":        amt.loc[mask].round(2),
+            }))
 
     combined = pd.concat([base] + tax_frames, ignore_index=True) if tax_frames else base
 
