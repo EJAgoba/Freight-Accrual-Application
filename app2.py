@@ -441,7 +441,7 @@ def _normalize_headers(df: pd.DataFrame) -> pd.DataFrame:
        kflat = k.replace(" ", "").replace("_", "")
        # core
        if k == "runnumber":                     canon[c] = "Run Number"
-       elif k == "total paid minus duty and cad taxes":  canon[c] = "Amount"  # NET
+       elif k == "total paid minus duty and cad tax":  canon[c] = "Amount"  # NET
        # fallbacks
        elif k == "profit center":               canon[c] = "Profit Center"
        elif k == "cost center":                 canon[c] = "Cost Center"
@@ -637,4 +637,5 @@ if file_kind == "Weekly Audit":
            )
        except Exception as e:
            st.error(f"Weekly Audit accounting summary failed: {e}")
+
 
