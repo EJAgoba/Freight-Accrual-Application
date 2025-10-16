@@ -403,7 +403,8 @@ st.download_button(
 )
 
 
-   # ================== Weekly Audit -> Accounting Summary (NET AMOUNT + NO .0) ==================
+
+# ================== Weekly Audit -> Accounting Summary (FINAL with dot-strip) ==================
 # ---------- Safe helpers ----------
 def _to_series(x):
    if isinstance(x, pd.DataFrame):
@@ -423,9 +424,14 @@ def _clean_run_str(series):
    s = _text(series)
    return s.str.strip().str.replace(r"\.0$", "", regex=True)
 def _clean_acct(series):
+   """
+   Force Account # to text, trim, drop trailing '.0', and
+   remove any '.' and everything after it (e.g., '621020.45' -> '621020').
+   """
    s = _text(series).str.strip()
-   # kill any trailing ".0" that might have come from Excel
    s = s.str.replace(r"\.0$", "", regex=True)
+   # remove first '.' and anything after
+   s = s.str.replace(r"\..*$", "", regex=True)
    return s
 # ---------- Header normalization (aliases for core + tax/duty) ----------
 def _normalize_headers(df: pd.DataFrame) -> pd.DataFrame:
@@ -435,9 +441,8 @@ def _normalize_headers(df: pd.DataFrame) -> pd.DataFrame:
        kflat = k.replace(" ", "").replace("_", "")
        # core
        if k == "runnumber":                     canon[c] = "Run Number"
-       # NEW: we use "Total Paid Minus Duty and CAD Taxes" as Amount
-       elif k == "total paid minus duty and cad taxes":  canon[c] = "Amount"
-       # (keep older fallbacks in case the header varies)
+       elif k == "total paid minus duty and cad taxes":  canon[c] = "Amount"  # NET
+       # fallbacks
        elif k in ("paid amount", "paid", "amount"):      canon[c] = "Amount"
        elif k == "profit center":               canon[c] = "Profit Center"
        elif k == "cost center":                 canon[c] = "Cost Center"
@@ -459,11 +464,11 @@ def _normalize_headers(df: pd.DataFrame) -> pd.DataFrame:
 # ---------- Build one output sheet from one input tab ----------
 def _build_currency_sheet(df: pd.DataFrame, force_currency: str, selected_run: str | None) -> pd.DataFrame:
    """
-   - Uses 'Total Paid Minus Duty and CAD Taxes' as Amount (mapped to 'Amount')
+   - Uses 'Total Paid Minus Duty and CAD Taxes' as base Amount
    - Filters to selected_run (Batch Number) if provided
-   - Expands GST/PST, HST, QST, Duty into separate rows (same Profit/Cost)
-   - Groups and inserts top balancing row (Account # = 240400)
-   - Amount rounded to 2 decimals; Account # always TEXT (no .0)
+   - Expands GST/PST, HST, QST, Duty into separate rows
+   - Groups and inserts top balancing row (Account #=240400) from NET ONLY
+   - Amount rounded to 2 decimals; Account # always text (and dot-suffix removed)
    """
    df = _normalize_headers(df.copy())
    # Required columns
@@ -483,21 +488,23 @@ def _build_currency_sheet(df: pd.DataFrame, force_currency: str, selected_run: s
        df = df[df["Run Number"] == run_filter_val]
        if df.empty:
            raise ValueError(f"No rows found for Run Number '{selected_run}' in {force_currency} sheet.")
-   # Base rows (Amount already the NET amount)
+   # -------- Base rows (NET only) --------
    base = pd.DataFrame({
        "Run Number":    _clean_run_str(df["Run Number"]),
        "Profit Center": _text(df["Profit Center"]).str.strip(),
        "Cost Center":   _text(df["Cost Center"]).str.strip(),
-       "Account #":     _clean_acct(df["Account #"]),  # TEXT
+       "Account #":     _clean_acct(df["Account #"]),  # TEXT + strip after '.'
        "Currency":      df["Currency"],
        "Amount":        _num(df["Amount"]),
    })
-   # Expand GST/HST/QST/Duty rows from their specific Paid columns
+   # NET total for header (exclude tax/duty expansions)
+   base_total = float(base["Amount"].sum().round(2))
+   # -------- Tax/Duty expansion --------
    tax_specs = [
        ("GST/PST Paid", "GST/PST Account #", "203063"),
        ("HST Paid",     "HST Account #",     "203064"),
        ("QST Paid",     "QST Account #",     "203065"),
-       ("Duty Paid",    "Duty Account #",    None),  # duty has no default
+       ("Duty Paid",    "Duty Account #",    None),  # no default for Duty
    ]
    tax_frames = []
    for paid_col, acct_col, default_acct in tax_specs:
@@ -512,7 +519,7 @@ def _build_currency_sheet(df: pd.DataFrame, force_currency: str, selected_run: s
                    "Run Number":    _clean_run_str(df.loc[mask, "Run Number"]),
                    "Profit Center": _text(df.loc[mask, "Profit Center"]).str.strip(),
                    "Cost Center":   _text(df.loc[mask, "Cost Center"]).str.strip(),
-                   "Account #":     _clean_acct(acct.loc[mask]),   # TEXT
+                   "Account #":     _clean_acct(acct.loc[mask]),  # TEXT + strip after '.'
                    "Currency":      force_currency,
                    "Amount":        amt.loc[mask].round(2),
                }))
@@ -522,29 +529,35 @@ def _build_currency_sheet(df: pd.DataFrame, force_currency: str, selected_run: s
        combined.groupby(["Profit Center","Cost Center","Account #","Currency"], dropna=False, as_index=False)["Amount"]
                .sum()
    )
+   # ---- Post-gen cleanup: enforce Account # text & strip any dot suffix globally ----
+   grouped["Account #"] = _clean_acct(grouped["Account #"])
+   # Add blanks
    for c in ["Order","Segment","Bus. Area"]:
        grouped[c] = ""
    out_run = run_filter_val or (_clean_run_str(combined["Run Number"]).mode().iloc[0] if not combined.empty else "")
    grouped["Run Number"] = out_run
-   # column order + ensure Account # text
-   grouped["Account #"] = _clean_acct(grouped["Account #"])
+   # Column order & numeric rounding
    grouped = grouped[["Run Number","Profit Center","Cost Center","Order",
                       "Account #","Bus. Area","Segment","Currency","Amount"]]
    grouped["Amount"] = grouped["Amount"].round(2)
-   # Top balancing header row
-   neg_sum = -float(grouped["Amount"].sum().round(2))
+   # -------- Header row (NEGATIVE of NET ONLY) --------
+   header_amount = round(-base_total, 2)
    header = {
        "Run Number": out_run,
        "Profit Center": "686",
        "Cost Center": "",
        "Order": "",
-       "Account #": "240400",     # TEXT
+       "Account #": "240400",     # TEXT; no dot suffix
        "Bus. Area": "",
        "Segment": "",
        "Currency": force_currency,
-       "Amount": round(neg_sum, 2),
+       "Amount": header_amount,
    }
-   return pd.concat([pd.DataFrame([header]), grouped], ignore_index=True)
+   # Final concatenation
+   out_df = pd.concat([pd.DataFrame([header]), grouped], ignore_index=True)
+   # One more global pass to be safe (anystray 'Account #' with dots):
+   out_df["Account #"] = _clean_acct(out_df["Account #"])
+   return out_df
 # ---------- UI: re-attach edited workbook; filter by Batch Number; export with Account # as TEXT ----------
 if file_kind == "Weekly Audit":
    st.markdown("### Attach edited Weekly Audit file (optional)")
@@ -596,7 +609,7 @@ if file_kind == "Weekly Audit":
            usd_sheet = _build_currency_sheet(usd_df, "USD", selected_run if selected_run else None)
            cad_sheet = _build_currency_sheet(cad_df, "CAD", selected_run if selected_run else None)
            bio = io.BytesIO()
-           # Prevent strings that look like numbers from being auto-cast
+           # Keep text as text; don't auto-cast
            with pd.ExcelWriter(
                bio,
                engine="xlsxwriter",
@@ -607,14 +620,13 @@ if file_kind == "Weekly Audit":
                cad_sheet.to_excel(writer, index=False, sheet_name="CAD")
                workbook = writer.book
                text_fmt = workbook.add_format({'num_format': '@'})  # '@' = text
-               # Force 'Account #' column to TEXT and rewrite cells explicitly as strings
+               # Force 'Account #' columns to TEXT and write explicit strings
                for sheet_name, df_out in {"USD": usd_sheet, "CAD": cad_sheet}.items():
                    ws = writer.sheets[sheet_name]
-                   acct_idx = df_out.columns.get_loc("Account #")  # 0-based
-                   # 1) Set column format to text
+                   acct_idx = df_out.columns.get_loc("Account #")
                    ws.set_column(acct_idx, acct_idx, None, text_fmt)
-                   # 2) Overwrite each cell in that column as an explicit string
-                   for r, v in enumerate(df_out["Account #"].astype(str).tolist(), start=1):  # +1 for header row
+                   # Rewrite cells as strings to beat Excel auto-typing
+                   for r, v in enumerate(df_out["Account #"].astype(str).tolist(), start=1):  # +1 for header
                        ws.write_string(r, acct_idx, v)
            bio.seek(0)
            st.download_button(
@@ -622,7 +634,7 @@ if file_kind == "Weekly Audit":
                data=bio.read(),
                file_name=f"{base_name} - Accounting Summary (Run {selected_run or 'auto'}) - {source_label}.xlsx",
                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-               help="Uses NET amount; expands GST/HST/QST/Duty; keeps Account # as true text (no .0)."
+               help="Uses NET amount; expands GST/HST/QST/Duty; strips any Account # suffix after '.', and keeps Account # as text."
            )
        except Exception as e:
            st.error(f"Weekly Audit accounting summary failed: {e}")
