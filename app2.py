@@ -452,7 +452,7 @@ def _normalize_headers(df: pd.DataFrame) -> pd.DataFrame:
 
         if k == "runnumber":                     canon[c] = "Run Number"
 
-        elif k in ("paid amount", "paid"):       canon[c] = "Amount"
+        elif k in ("total paid minus duty and cad tax"):       canon[c] = "Amount"
 
         elif k == "profit center":               canon[c] = "Profit Center"
 
@@ -769,3 +769,4 @@ if file_kind == "Weekly Audit":
         except Exception as e:
 
             st.error(f"Weekly Audit accounting summary failed: {e}")
+
