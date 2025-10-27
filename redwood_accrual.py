@@ -90,9 +90,9 @@ def render_redwood_accrual_ui(
 
     # ---- Find BOL columns (tolerant) ----
 
-    a3_bol_col = _find_first_col(a3_df, ["BOL Number", "BOL", "BOLNumber", "Pro/BOL", "Pro / BOL"])
+    a3_bol_col = _find_first_col(a3_df, ["BOL Number", "BOL", "BOLNumber", "Pro/BOL", "Pro / BOL", "Load Number", "Shipment #"])
 
-    rw_bol_col = _find_first_col(rw_df, ["BOL Number", "BOL", "BOLNumber", "Pro/BOL", "Pro / BOL"])
+    rw_bol_col = _find_first_col(rw_df, ["BOL Number", "BOL", "BOLNumber", "Pro/BOL", "Pro / BOL", "Load Number"])
 
     if a3_bol_col is None or rw_bol_col is None:
 
