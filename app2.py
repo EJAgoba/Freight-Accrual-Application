@@ -203,7 +203,7 @@ render_redwood_accrual_ui(load_reference_tables, run_pipeline)
 
 # ========= Dynamic UI: Accrual vs Weekly Audit =========
 
-st.markdown("### What file are you processing?")
+st.header("Accrual and Weekly Audit Processsing")
 
 file_kind = st.radio("Select one:", ["Accrual", "Weekly Audit"], horizontal=True)
 
@@ -559,6 +559,7 @@ if file_kind == "Weekly Audit":
                )
        except Exception as e:
            st.error(f"Weekly Audit accounting summary failed: {e}")
+
 
 
 
