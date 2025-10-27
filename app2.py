@@ -13,6 +13,13 @@ from clean_codes import CodeFormatter
 from map_types import TypeMapper, TypeCleaner
 from coding_matrix import SPECIAL_TYPE_MAPPINGS, Coding_Matrix
 from matrix_map import MatrixMapper
+from redwood_accrual import render_redwood_accrual_ui
+
+
+#Deal with Redwood Accrual First 
+render_redwood_accrual_ui(load_reference_tables, run_pipeline)
+
+
 # ========= Page / Theme =========
 st.set_page_config(
    page_title="Cintas Logistics — Accrual Re-Coding",
@@ -552,5 +559,6 @@ if file_kind == "Weekly Audit":
                )
        except Exception as e:
            st.error(f"Weekly Audit accounting summary failed: {e}")
+
 
 
