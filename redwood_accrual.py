@@ -124,9 +124,9 @@ def render_redwood_accrual_ui(
 
     # Optional sheet selectors (appear only when an Excel file is uploaded)
 
-    a3_sheet = _sheet_picker(a3_file, "A3") if _looks_like_excel(a3_file) else None
+    a3_sheet = None
 
-    rw_sheet = _sheet_picker(redwood_file, "Redwood") if _looks_like_excel(redwood_file) else None
+    rw_sheet = None
 
     run_btn = st.button("Run Redwood Accrual", type="primary")
 
