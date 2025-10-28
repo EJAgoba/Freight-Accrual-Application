@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import io
-
-import csv
+import io, csv
 
 from typing import Callable, Iterable
 
@@ -12,7 +10,7 @@ import pandas as pd
 
 import streamlit as st
 
-# ====================== CONFIG ======================
+# ---------- Config ----------
 
 HEADER_MAP = {
 
@@ -50,23 +48,29 @@ REVERT_MAP = {
 
 }
 
-BOL_CANDIDATES = ["BOL Number", "BOL", "Pro/BOL", "Pro / BOL", "Pro", "Reference"]
+BOL_CANDIDATES = ["BOL Number", "BOL", "Pro/BOL", "Pro / BOL", "Pro", "Reference", "Load Number", "Shipment #"]
 
 REQUIRED_PIPELINE_COLS = [
 
-    "Consignor", "Consignee",
+    "Consignor","Consignee","Consignor Code","Consignee Code",
 
-    "Consignor Code", "Consignee Code",
+    "Dest Address1","Dest City","Dest State Code",
 
-    "Dest Address1", "Dest City", "Dest State Code",
+    "Origin Addresss","Origin City","Origin State Code",
 
-    "Origin Addresss", "Origin City", "Origin State Code",
-
-    "Profit Center", "Cost Center", "Account #",
+    "Profit Center","Cost Center","Account #",
 
 ]
 
-# ====================== MAIN UI ======================
+SPEND_CANDIDATES = [
+
+    "Total Paid Minus Duty and CAD Tax",  # highest priority if present
+
+    "Paid Amount","Paid","Amount","Total","Spend","Charge","Charges"
+
+]
+
+# ---------- UI Entrypoint ----------
 
 def render_redwood_accrual_ui(
 
@@ -82,27 +86,15 @@ def render_redwood_accrual_ui(
 
     with c1:
 
-        a3_file = st.file_uploader(
+        a3_file = st.file_uploader("Upload **A3** file (TXT / CSV / Excel)",
 
-            "Upload **A3** file (TXT / CSV / Excel)",
-
-            type=["txt", "text", "csv", "xls", "xlsx", "xlsm"],
-
-            key="rw_a3",
-
-        )
+                                   type=["txt","text","csv","xls","xlsx","xlsm"], key="rw_a3")
 
     with c2:
 
-        redwood_file = st.file_uploader(
+        redwood_file = st.file_uploader("Upload **Redwood** file (TXT / CSV / Excel)",
 
-            "Upload **Redwood** file (TXT / CSV / Excel)",
-
-            type=["txt", "text", "csv", "xls", "xlsx", "xlsm"],
-
-            key="rw_rw",
-
-        )
+                                        type=["txt","text","csv","xls","xlsx","xlsm"], key="rw_rw")
 
     if not st.button("Run Redwood Accrual", type="primary"):
 
@@ -114,7 +106,7 @@ def render_redwood_accrual_ui(
 
         return
 
-    # ---- Read both files ----
+    # Read inputs (any format)
 
     try:
 
@@ -130,23 +122,23 @@ def render_redwood_accrual_ui(
 
     st.info(f"A3 rows: **{len(a3_df):,}**, Redwood rows: **{len(rw_df):,}**")
 
-    # ---- Detect BOL columns ----
+    # Detect BOL columns
 
-    a3_bol_col = _find_first_col(a3_df, BOL_CANDIDATES)
+    a3_bol = _find_first_col(a3_df, BOL_CANDIDATES)
 
-    rw_bol_col = _find_first_col(rw_df, BOL_CANDIDATES)
+    rw_bol = _find_first_col(rw_df, BOL_CANDIDATES)
 
-    if a3_bol_col is None or rw_bol_col is None:
+    if a3_bol is None or rw_bol is None:
 
-        st.error("Could not find a valid BOL / Pro-BOL column in one or both files.")
+        st.error("Could not find a BOL / Pro-BOL column in one or both files.")
 
         return
 
-    # ---- Filter Redwood for BOLs not in A3 ----
+    # Filter Redwood: BOLs not in A3
 
     a3_bols = (
 
-        a3_df[a3_bol_col].astype(str).str.strip()
+        a3_df[a3_bol].astype(str).str.strip()
 
         .replace({"": pd.NA, "nan": pd.NA, "None": pd.NA})
 
@@ -154,7 +146,7 @@ def render_redwood_accrual_ui(
 
     )
 
-    rw_df["_BOL_KEY"] = rw_df[rw_bol_col].astype(str).str.strip().fillna("")
+    rw_df["_BOL_KEY"] = rw_df[rw_bol].astype(str).str.strip().fillna("")
 
     filtered = rw_df[~rw_df["_BOL_KEY"].isin(a3_bols)].drop(columns=["_BOL_KEY"], errors="ignore")
 
@@ -166,17 +158,17 @@ def render_redwood_accrual_ui(
 
         return
 
-    # ---- Normalize headers for pipeline ----
+    # Normalize headers for pipeline
 
     filtered = _normalize_headers(filtered, HEADER_MAP)
 
-    for col in REQUIRED_PIPELINE_COLS:
+    for c in REQUIRED_PIPELINE_COLS:
 
-        if col not in filtered.columns:
+        if c not in filtered.columns:
 
-            filtered[col] = ""
+            filtered[c] = ""
 
-    # ---- Load references & run pipeline ----
+    # Load references & run pipeline
 
     try:
 
@@ -188,11 +180,11 @@ def render_redwood_accrual_ui(
 
         return
 
-    with st.spinner("Running Redwood Accrual logic..."):
+    with st.spinner("Running Redwood accrual logic…"):
 
         try:
 
-            result_df = run_pipeline(filtered.copy(), my_location_table, complete_loc_tbl, location_codes)
+            result = run_pipeline(filtered.copy(), my_location_table, complete_loc_tbl, location_codes)
 
         except Exception as e:
 
@@ -200,79 +192,77 @@ def render_redwood_accrual_ui(
 
             return
 
-    # ---- Build GL using Account # EJ ----
+    # Build GL from EJ columns (no dependency on MY LOCATION TABLE)
 
-    result_df["GL"] = (
+    for ej in ["Profit Center EJ","Cost Center EJ","Account # EJ"]:
 
-        result_df["Profit Center EJ"].astype(str).str.strip() + "." +
+        if ej not in result.columns:
 
-        result_df["Cost Center EJ"].astype(str).str.strip() + "." +
+            result[ej] = ""
 
-        result_df["Account # EJ"].astype(str).str.strip()
+    result["GL"] = (
+
+        result["Profit Center EJ"].astype(str).str.strip() + "." +
+
+        result["Cost Center EJ"].astype(str).str.strip() + "." +
+
+        result["Account # EJ"].astype(str).str.strip()
 
     ).str.strip(".")
 
-    # ---- Build Pivot Summary (GL + Sum of Spend) ----
+    # Pick spend column & build Pivot (GL + Sum of Spend only)
 
-    pivot_df = _build_pivot_summary(result_df)
+    spend_col = next((c for c in SPEND_CANDIDATES if c in result.columns), None)
 
-    # ---- Revert headers for export ----
+    if spend_col is None:
 
-    export_df = _revert_headers(result_df, REVERT_MAP)
+        pivot = pd.DataFrame(columns=["GL","Sum of Spend"])
 
-    st.success(f"✅ Done! Processed {len(result_df):,} rows with GL and Pivot Summary added.")
+        st.warning("Could not find a spend column to summarize; Pivot will be empty.")
 
-    # ---- Export Excel ----
+    else:
 
-    xls_bytes = _to_multi_sheet_xlsx({
+        pivot = _pivot_gl_sum(result, spend_col)
 
-        "Redwood Accrual": export_df,
+        st.caption(f"Pivot uses spend column: **{spend_col}**")
 
-        "Pivot Summary": pivot_df
+    # Revert headers back to original Redwood names for export
 
-    })
+    export_df = _revert_headers(result, REVERT_MAP)
 
-    st.download_button(
+    st.success(f"Done! Redwood Accrual processed **{len(result):,}** rows.")
 
-        "⬇️ Download Redwood Accrual (Excel w/ Pivot Summary)",
+    # Export Excel (two sheets) + CSV
 
-        data=xls_bytes,
+    xls_bytes = _to_multi_sheet_xlsx({"Redwood Accrual": export_df, "Pivot Summary": pivot})
 
-        file_name="Redwood Accrual - Not In A3.xlsx",
+    st.download_button("⬇️ Download Redwood Accrual (Excel w/ Pivot Summary)",
 
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                       data=xls_bytes,
 
-    )
+                       file_name="Redwood Accrual - Not In A3.xlsx",
 
-    # Optional CSV
+                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-    st.download_button(
+    st.download_button("⬇️ Download Redwood Accrual (CSV)",
 
-        "⬇️ Download Redwood Accrual (CSV)",
+                       data=export_df.to_csv(index=False).encode("utf-8"),
 
-        data=export_df.to_csv(index=False).encode("utf-8"),
+                       file_name="Redwood Accrual - Not In A3.csv",
 
-        file_name="Redwood Accrual - Not In A3.csv",
+                       mime="text/csv")
 
-        mime="text/csv",
-
-    )
-
-# ====================== HELPERS ======================
+# ---------- Helpers ----------
 
 def _read_any(upload) -> pd.DataFrame:
 
-    """Read TXT, CSV, or Excel automatically."""
-
     name = (upload.name or "").lower()
 
-    if name.endswith((".xls", ".xlsx", ".xlsm")):
+    if name.endswith((".xls",".xlsx",".xlsm")):
 
         return pd.read_excel(upload, dtype=str)
 
-    head = upload.read(4096)
-
-    upload.seek(0)
+    head = upload.read(4096); upload.seek(0)
 
     try:
 
@@ -294,9 +284,7 @@ def _find_first_col(df: pd.DataFrame, candidates: Iterable[str]) -> str | None:
 
     for c in candidates:
 
-        if c in df.columns:
-
-            return c
+        if c in df.columns: return c
 
     lower = {col.lower(): col for col in df.columns}
 
@@ -304,25 +292,19 @@ def _find_first_col(df: pd.DataFrame, candidates: Iterable[str]) -> str | None:
 
         real = lower.get(c.lower())
 
-        if real:
-
-            return real
+        if real: return real
 
     return None
 
-def _normalize_headers(df: pd.DataFrame, mapping: dict[str, str]) -> pd.DataFrame:
+def _normalize_headers(df: pd.DataFrame, mapping: dict[str,str]) -> pd.DataFrame:
 
-    df = df.copy()
-
-    lower_to_real = {c.lower(): c for c in df.columns}
+    df = df.copy(); lower_to_real = {c.lower(): c for c in df.columns}
 
     for left, right in mapping.items():
 
         src = lower_to_real.get(left)
 
-        if not src:
-
-            continue
+        if not src: continue
 
         if right in df.columns:
 
@@ -336,33 +318,13 @@ def _normalize_headers(df: pd.DataFrame, mapping: dict[str, str]) -> pd.DataFram
 
     return df
 
-def _revert_headers(df: pd.DataFrame, reverse_map: dict[str, str]) -> pd.DataFrame:
+def _revert_headers(df: pd.DataFrame, rev: dict[str,str]) -> pd.DataFrame:
 
-    rename_map = {src: tgt for src, tgt in reverse_map.items() if src in df.columns}
+    rename_map = {src: tgt for src, tgt in rev.items() if src in df.columns}
 
     return df.rename(columns=rename_map)
 
-def _build_pivot_summary(df: pd.DataFrame) -> pd.DataFrame:
-
-    """Pivot summary: GL + Sum of Spend."""
-
-    if df.empty:
-
-        return pd.DataFrame(columns=["GL", "Sum of Spend"])
-
-    if "GL" not in df.columns:
-
-        return pd.DataFrame(columns=["GL", "Sum of Spend"])
-
-    # Pick best spend-like column
-
-    spend_candidates = ["Paid", "Paid Amount", "Amount", "Total", "Spend", "Charge", "Total Paid Minus Duty and CAD Tax"]
-
-    spend_col = next((c for c in spend_candidates if c in df.columns), None)
-
-    if not spend_col:
-
-        return pd.DataFrame(columns=["GL", "Sum of Spend"])
+def _pivot_gl_sum(df: pd.DataFrame, spend_col: str) -> pd.DataFrame:
 
     tmp = df.copy()
 
@@ -372,21 +334,13 @@ def _build_pivot_summary(df: pd.DataFrame) -> pd.DataFrame:
 
         errors="coerce"
 
-    ).fillna(0)
+    ).fillna(0.0)
 
-    summary = (
+    out = tmp.groupby("GL", dropna=False)["_Spend_"].sum().reset_index(name="Sum of Spend")
 
-        tmp.groupby("GL", dropna=False)["_Spend_"]
+    out["Sum of Spend"] = out["Sum of Spend"].round(2)
 
-        .sum()
-
-        .reset_index(name="Sum of Spend")
-
-    )
-
-    summary["Sum of Spend"] = summary["Sum of Spend"].round(2)
-
-    return summary.sort_values("GL").reset_index(drop=True)
+    return out.sort_values("GL").reset_index(drop=True)
 
 def _to_multi_sheet_xlsx(sheets: dict[str, pd.DataFrame]) -> bytes:
 
@@ -396,9 +350,9 @@ def _to_multi_sheet_xlsx(sheets: dict[str, pd.DataFrame]) -> bytes:
 
         with pd.ExcelWriter(bio, engine="xlsxwriter") as w:
 
-            for name, df in sheets.items():
+            for name, frame in sheets.items():
 
-                df.to_excel(w, index=False, sheet_name=name)
+                frame.to_excel(w, index=False, sheet_name=name)
 
     except Exception:
 
@@ -406,10 +360,8 @@ def _to_multi_sheet_xlsx(sheets: dict[str, pd.DataFrame]) -> bytes:
 
         with pd.ExcelWriter(bio, engine="openpyxl") as w:
 
-            for name, df in sheets.items():
+            for name, frame in sheets.items():
 
-                df.to_excel(w, index=False, sheet_name=name)
+                frame.to_excel(w, index=False, sheet_name=name)
 
-    bio.seek(0)
-
-    return bio.read()
+    bio.seek(0); return bio.read()
