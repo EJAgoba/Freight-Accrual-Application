@@ -40,7 +40,7 @@ DROP_SOURCE_COLUMNS = True
 
 # Candidate BOL headers (case-insensitive search)
 
-BOL_CANDIDATES = ["BOL Number", "BOL", "BOLNumber", "Pro/BOL", "Pro / BOL", "Pro", "Reference"]
+BOL_CANDIDATES = ["BOL Number", "BOL", "BOLNumber", "Pro/BOL", "Pro / BOL", "Pro", "Reference", "Load Number"]
 
 # Minimum columns your pipeline expects (we'll create blanks if missing)
 
