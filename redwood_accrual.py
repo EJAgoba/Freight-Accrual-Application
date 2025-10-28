@@ -56,7 +56,7 @@ REVERT_MAP = {
 
 # Candidate BOL headers (case-insensitive search)
 
-BOL_CANDIDATES = ["BOL Number", "BOL", "BOLNumber", "Pro/BOL", "Pro / BOL", "Pro", "Reference"]
+BOL_CANDIDATES = ["BOL Number", "BOL", "BOLNumber", "Pro/BOL", "Pro / BOL", "Pro", "Reference", "Load Number", "Shipment #"]
 
 # Minimum columns your pipeline expects (we'll create blanks if missing)
 
