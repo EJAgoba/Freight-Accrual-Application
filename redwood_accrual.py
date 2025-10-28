@@ -194,16 +194,13 @@ def render_redwood_accrual_ui(
 
     # Build GL from EJ columns (no dependency on MY LOCATION TABLE)
 
-    for ej in ["Profit Center EJ","Cost Center EJ","Account # EJ"]:
+    for ej in ["Cost Center EJ","Account # EJ"]:
 
         if ej not in result.columns:
 
             result[ej] = ""
 
     result["GL"] = (
-
-        result["Profit Center EJ"].astype(str).str.strip() + "." +
-
         result["Cost Center EJ"].astype(str).str.strip() + "." +
 
         result["Account # EJ"].astype(str).str.strip()
