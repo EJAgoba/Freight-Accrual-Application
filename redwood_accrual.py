@@ -701,5 +701,3 @@ def _to_multi_sheet_xlsx(sheets: dict[str, pd.DataFrame]) -> bytes:
     bio.seek(0)
 
     return bio.read()
-For Sale Page
- 
