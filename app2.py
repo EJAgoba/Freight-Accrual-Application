@@ -3,9 +3,9 @@ import calendar
 import datetime as dt
 import pandas as pd
 import streamlit as st
-# === Existing module you already have ===
+# === Existing core module ===
 from redwood_accrual import render_redwood_accrual_ui
-# === New/refactored modules ===
+# === New modular imports ===
 from constants import APP_TITLE, APP_HEADER_HTML
 from theme import theme_css
 from references import ReferenceLoader
@@ -16,33 +16,31 @@ from exporters import Exporter
 
 # ================= Page / Theme =================
 st.set_page_config(page_title=APP_TITLE, page_icon="💼", layout="wide")
-# Sidebar appearance toggle
+# Sidebar dark/light toggle
 if "ui_mode" not in st.session_state:
    st.session_state.ui_mode = "light"
 with st.sidebar:
    st.markdown("### Appearance")
    dark_on = st.toggle("Dark mode", value=(st.session_state.ui_mode == "dark"))
    st.session_state.ui_mode = "dark" if dark_on else "light"
-# Inject themed CSS, add spacer to avoid header clipping, then render header
+# Inject theme CSS + header spacer + stylish hero header
 st.markdown(theme_css(st.session_state.ui_mode), unsafe_allow_html=True)
 st.markdown('<div class="page-top-spacer"></div>', unsafe_allow_html=True)
 st.markdown(APP_HEADER_HTML, unsafe_allow_html=True)
 
-# ================= Cached references =================
+# ================= Cached References =================
 @st.cache_data(show_spinner=False)
 def load_reference_tables():
-   """Loads: location_codes, MY LOCATION TABLE, and Complete Coding table."""
    return ReferenceLoader().load()
 
-# ================= Redwood Accrual (unchanged) =================
+# ================= Redwood Accrual =================
 render_redwood_accrual_ui(load_reference_tables, PipelineRunner().run)
 
-# ================= Main: Accrual vs Weekly Audit =================
+# ================= Accrual vs Weekly Audit =================
 st.header("Accrual and Weekly Audit Processing")
 file_kind = st.radio("Select one:", ["Accrual", "Weekly Audit"], horizontal=True)
 today = dt.date.today()
 if file_kind == "Accrual":
-   # default to previous month
    prev_month = (today.replace(day=1) - dt.timedelta(days=1))
    years = list(range(today.year - 3, today.year + 2))
    months = list(range(1, 13))
@@ -51,8 +49,7 @@ if file_kind == "Accrual":
        sel_year = st.selectbox("Year", years, index=years.index(prev_month.year))
    with c2:
        sel_month = st.selectbox(
-           "Month",
-           months,
+           "Month", months,
            format_func=lambda m: calendar.month_abbr[m],
            index=prev_month.month - 1
        )
@@ -63,7 +60,6 @@ else:
        batch_num = st.text_input("Batch Number").strip()
    with c2:
        week_of_month = st.selectbox("Week of Month", [1, 2, 3, 4, 5], index=0)
-   # Weekly Audit allows multiple formats
    upload_types = ["txt", "text", "csv", "xlsx"]
 st.markdown("### Upload workbook")
 file = st.file_uploader("Select a file", type=upload_types)
@@ -93,7 +89,7 @@ with st.spinner("Running accrual re-coding…"):
        st.error(f"Pipeline error: {e}")
        st.stop()
 st.success(f"Done! Processed **{len(result_df):,}** rows.")
-# Build filenames
+# File names
 if file_kind == "Accrual":
    mon_label = f"{calendar.month_abbr[sel_month]}-{sel_year}"
    base_name = f"Accrual {mon_label}"
