@@ -12,9 +12,7 @@ def theme_css(mode: str = "light") -> str:
 
     """
 
-    Returns CSS for 'light' or 'dark'. Call with:
-
-      st.markdown(theme_css(mode), unsafe_allow_html=True)
+    Returns CSS for 'light' or 'dark' mode. Clean, modern, and fully responsive.
 
     """
 
@@ -53,11 +51,15 @@ def theme_css(mode: str = "light") -> str:
 
   }}
 
-  /* Layout + Typography */
+  /* ====== Layout ====== */
 
-  /* Extra top padding fixes header clipping at some zoom/monitor combos */
+  main .block-container {{
 
-  main .block-container {{ padding-top: 2rem !important; padding-bottom: 1.25rem; }}
+    padding-top: 2.5rem !important; /* Prevent header cut-off */
+
+    padding-bottom: 1.5rem;
+
+  }}
 
   html, body, [class^="stApp"] {{
 
@@ -65,49 +67,85 @@ def theme_css(mode: str = "light") -> str:
 
     background: var(--surface-alt);
 
-  }}
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
-  /* Make Streamlit's sticky header transparent so it never hides our header */
+  }}
 
   header[data-testid="stHeader"] {{
 
     background: transparent !important;
 
-    border: 0 !important;
+    border: none !important;
 
     box-shadow: none !important;
 
   }}
 
-  /* Tiny spacer utility for manual vertical breathing room */
+  /* ====== App Header ====== */
 
-  .page-top-spacer {{ height: 8px; }}
-
-  /* App Header */
+  .page-top-spacer {{ height: 10px; }}
 
   .app-header {{
 
-    background: linear-gradient(180deg, color-mix(in oklab, var(--primary) 18%, transparent) 0%, transparent 100%),
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
 
-                var(--surface);
+    border-radius: 16px;
 
-    border: 1px solid var(--border);
+    padding: 1.75rem 2rem;
 
-    border-radius: 14px;
+    margin-bottom: 1.25rem;
 
-    padding: 18px 20px;
+    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.08);
 
-    margin-bottom: 1rem;
+    color: white;
 
-    box-shadow: 0 1px 0 rgba(0,0,0,.03), 0 6px 20px rgba(2,6,23,.04);
+    position: relative;
+
+    overflow: hidden;
 
   }}
 
-  .app-title {{ font-weight: 700; font-size: 1.1rem; letter-spacing: .2px; }}
+  .app-header::after {{
 
-  .app-subtitle {{ opacity:.85; color: var(--text-muted); margin-top: 4px; }}
+    content: "";
 
-  /* Cards */
+    position: absolute;
+
+    inset: 0;
+
+    background: radial-gradient(circle at top left, rgba(255,255,255,0.15) 0%, transparent 70%);
+
+    mix-blend-mode: overlay;
+
+  }}
+
+  .app-title {{
+
+    font-weight: 800;
+
+    font-size: 1.6rem;
+
+    margin-bottom: 0.25rem;
+
+    letter-spacing: 0.5px;
+
+  }}
+
+  .app-subtitle {{
+
+    font-weight: 400;
+
+    opacity: 0.92;
+
+    color: rgba(255, 255, 255, 0.9);
+
+    font-size: 0.96rem;
+
+    max-width: 900px;
+
+  }}
+
+  /* ====== Cards ====== */
 
   .cintas-card {{
 
@@ -117,49 +155,55 @@ def theme_css(mode: str = "light") -> str:
 
     border-radius: 12px;
 
-    padding: 14px;
+    padding: 16px;
 
-    box-shadow: 0 1px 0 rgba(0,0,0,.03), 0 10px 22px rgba(2,6,23,.04);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.03);
 
   }}
 
-  /* Buttons */
+  /* ====== Buttons ====== */
 
   .stButton>button {{
 
-    background: var(--primary) !important; color: white !important; border: 0 !important;
+    background: var(--primary) !important; color: white !important; border: none !important;
 
-    border-radius: 10px !important; padding: 0.6rem 0.9rem !important;
+    border-radius: 10px !important; padding: 0.6rem 1rem !important;
 
-    box-shadow: 0 2px 0 rgba(0,0,0,.05);
+    font-weight: 600; transition: all 0.15s ease;
 
   }}
 
-  .stButton>button:hover {{ background: var(--primary-hover) !important; transform: translateY(-1px); }}
+  .stButton>button:hover {{
+
+    background: var(--primary-hover) !important;
+
+    transform: translateY(-1px);
+
+    box-shadow: 0 3px 6px rgba(0,0,0,0.08);
+
+  }}
 
   /* Download buttons */
 
   .stDownloadButton>button {{
 
-    background: var(--accent) !important; color: #00150f !important; border: 0 !important;
+    background: var(--accent) !important; color: #002d1f !important;
 
-    border-radius: 10px !important; padding: 0.6rem 0.9rem !important;
+    border: none !important; border-radius: 10px !important;
+
+    padding: 0.6rem 1rem !important; font-weight: 600;
 
   }}
 
   .stDownloadButton>button:hover {{ filter: brightness(0.96); transform: translateY(-1px); }}
 
-  /* Radios/Selects – pill vibe */
+  /* ====== Inputs / Selects / Radios ====== */
 
   div[role="radiogroup"] > label, .stSelectbox > div > div {{
 
     border-radius: 999px !important;
 
   }}
-
-  .stRadio > label {{ font-weight: 600; color: var(--text); }}
-
-  /* Inputs */
 
   .stTextInput > div > div > input,
 
@@ -172,6 +216,8 @@ def theme_css(mode: str = "light") -> str:
     border: 1px solid var(--border);
 
     border-radius: 10px;
+
+    font-size: 0.95rem;
 
   }}
 
@@ -189,35 +235,29 @@ def theme_css(mode: str = "light") -> str:
 
   }}
 
-  /* File Uploader */
-
-  .uploadedFile {{ color: var(--text-muted) !important; }}
-
-  /* Tables */
-
-  .stDataFrame, .stTable {{ border-radius: 12px; overflow: hidden; }}
-
-  .stDataFrame [data-testid="stTable"] td, .stDataFrame [data-testid="stTable"] th {{
-
-    border-color: var(--border) !important;
-
-  }}
-
-  /* Alerts */
+  /* ====== Alerts ====== */
 
   .stAlert > div {{
 
-    border-radius: 12px; border: 1px solid var(--border);
+    border-radius: 10px;
+
+    border: 1px solid var(--border);
 
     background: color-mix(in oklab, var(--surface) 85%, var(--accent) 15%);
 
   }}
 
-  /* Subtle scrollbar */
+  /* ====== Scrollbar ====== */
 
   ::-webkit-scrollbar {{ height: 10px; width: 10px; }}
 
-  ::-webkit-scrollbar-thumb {{ background: color-mix(in oklab, var(--text) 15%, transparent); border-radius: 12px; }}
+  ::-webkit-scrollbar-thumb {{
+
+    background: color-mix(in oklab, var(--text) 15%, transparent);
+
+    border-radius: 12px;
+
+  }}
 </style>
 
 """
