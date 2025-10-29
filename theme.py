@@ -193,4 +193,3 @@ def theme_css() -> str:
 </style>
 
 """
- 
