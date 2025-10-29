@@ -12,7 +12,17 @@ def theme_css(mode: str = "light") -> str:
 
     """
 
-    Returns CSS for 'light' or 'dark' mode. Clean, modern, and fully responsive.
+    Returns CSS for 'light' or 'dark' mode.
+
+    Dark mode fixes:
+
+      - Deeper page background & cards
+
+      - Higher-contrast text/subtitle
+
+      - Dark-styled inputs/selects/uploaders/radios
+
+      - Hero header tuned for dark
 
     """
 
@@ -26,6 +36,10 @@ def theme_css(mode: str = "light") -> str:
 
       --accent:{ACCENT}; --danger:{DANGER}; --ring:{RING};
 
+      --uploader-bg:#ffffff; --uploader-border:{BORDER}; --uploader-fg:{TEXT_MUTED};
+
+      --heading:#0b1220;
+
     """
 
     dark_vars = f"""
@@ -37,6 +51,10 @@ def theme_css(mode: str = "light") -> str:
       --primary:{PRIMARY}; --primary-hover:{PRIMARY_HOVER};
 
       --accent:{ACCENT}; --danger:{DANGER}; --ring:{D_RING};
+
+      --uploader-bg:#0d1726; --uploader-border:#223047; --uploader-fg:#9fb0c8;
+
+      --heading:#eaf1ff;
 
     """
 
@@ -55,7 +73,7 @@ def theme_css(mode: str = "light") -> str:
 
   main .block-container {{
 
-    padding-top: 2.5rem !important; /* Prevent header cut-off */
+    padding-top: 2.5rem !important;  /* fixes header clipping */
 
     padding-bottom: 1.5rem;
 
@@ -81,13 +99,15 @@ def theme_css(mode: str = "light") -> str:
 
   }}
 
-  /* ====== App Header ====== */
+  /* ====== App Header (hero) ====== */
 
   .page-top-spacer {{ height: 10px; }}
 
   .app-header {{
 
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+    background: linear-gradient(135deg, color-mix(in oklab, var(--primary) 85%, #0b1020) 0%,
+
+                                         color-mix(in oklab, var(--primary-hover) 85%, #0b1020) 100%);
 
     border-radius: 16px;
 
@@ -95,7 +115,7 @@ def theme_css(mode: str = "light") -> str:
 
     margin-bottom: 1.25rem;
 
-    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 10px 30px rgba(2, 6, 23, 0.18);
 
     color: white;
 
@@ -113,9 +133,15 @@ def theme_css(mode: str = "light") -> str:
 
     inset: 0;
 
-    background: radial-gradient(circle at top left, rgba(255,255,255,0.15) 0%, transparent 70%);
+    background:
+
+      radial-gradient(900px 300px at -10% -30%, rgba(255,255,255,.14) 0%, transparent 70%),
+
+      radial-gradient(700px 250px at 120% -40%, rgba(255,255,255,.10) 0%, transparent 75%);
 
     mix-blend-mode: overlay;
+
+    pointer-events: none;
 
   }}
 
@@ -123,27 +149,33 @@ def theme_css(mode: str = "light") -> str:
 
     font-weight: 800;
 
-    font-size: 1.6rem;
+    font-size: 1.55rem;
 
     margin-bottom: 0.25rem;
 
-    letter-spacing: 0.5px;
+    letter-spacing: 0.4px;
+
+    color: var(--heading);
 
   }}
 
   .app-subtitle {{
 
-    font-weight: 400;
+    font-weight: 500;
 
-    opacity: 0.92;
+    opacity: .96;
 
-    color: rgba(255, 255, 255, 0.9);
+    color: rgba(255,255,255,.92);
 
-    font-size: 0.96rem;
+    font-size: .98rem;
 
-    max-width: 900px;
+    max-width: 980px;
 
   }}
+
+  /* ====== Section headings ====== */
+
+  h1, h2, h3, h4, h5, h6 {{ color: var(--heading); }}
 
   /* ====== Cards ====== */
 
@@ -157,7 +189,7 @@ def theme_css(mode: str = "light") -> str:
 
     padding: 16px;
 
-    box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+    box-shadow: 0 2px 10px rgba(2, 6, 23, 0.18);
 
   }}
 
@@ -165,7 +197,7 @@ def theme_css(mode: str = "light") -> str:
 
   .stButton>button {{
 
-    background: var(--primary) !important; color: white !important; border: none !important;
+    background: var(--primary) !important; color: #ffffff !important; border: none !important;
 
     border-radius: 10px !important; padding: 0.6rem 1rem !important;
 
@@ -179,7 +211,7 @@ def theme_css(mode: str = "light") -> str:
 
     transform: translateY(-1px);
 
-    box-shadow: 0 3px 6px rgba(0,0,0,0.08);
+    box-shadow: 0 6px 14px rgba(0,0,0,.18);
 
   }}
 
@@ -187,11 +219,11 @@ def theme_css(mode: str = "light") -> str:
 
   .stDownloadButton>button {{
 
-    background: var(--accent) !important; color: #002d1f !important;
+    background: var(--accent) !important; color: #062016 !important;
 
     border: none !important; border-radius: 10px !important;
 
-    padding: 0.6rem 1rem !important; font-weight: 600;
+    padding: 0.6rem 1rem !important; font-weight: 700;
 
   }}
 
@@ -219,7 +251,13 @@ def theme_css(mode: str = "light") -> str:
 
     font-size: 0.95rem;
 
+    color: var(--text);
+
   }}
+
+  .stTextInput > div > div > input::placeholder,
+
+  .stTextArea textarea::placeholder {{ color: var(--text-muted); }}
 
   .stTextInput > div > div > input:focus,
 
@@ -235,6 +273,32 @@ def theme_css(mode: str = "light") -> str:
 
   }}
 
+  /* ====== File Uploader (dark-friendly) ====== */
+
+  [data-testid="stFileUploader"] > div {{
+
+    background: var(--uploader-bg) !important;
+
+    border: 1px dashed var(--uploader-border) !important;
+
+    color: var(--uploader-fg) !important;
+
+    border-radius: 12px !important;
+
+  }}
+
+  [data-testid="stFileUploader"] svg {{ fill: var(--uploader-fg) !important; }}
+
+  /* ====== Tables ====== */
+
+  .stDataFrame, .stTable {{ border-radius: 12px; overflow: hidden; }}
+
+  .stDataFrame [data-testid="stTable"] td, .stDataFrame [data-testid="stTable"] th {{
+
+    border-color: var(--border) !important;
+
+  }}
+
   /* ====== Alerts ====== */
 
   .stAlert > div {{
@@ -243,7 +307,7 @@ def theme_css(mode: str = "light") -> str:
 
     border: 1px solid var(--border);
 
-    background: color-mix(in oklab, var(--surface) 85%, var(--accent) 15%);
+    background: color-mix(in oklab, var(--surface) 78%, var(--accent) 22%);
 
   }}
 
@@ -253,7 +317,7 @@ def theme_css(mode: str = "light") -> str:
 
   ::-webkit-scrollbar-thumb {{
 
-    background: color-mix(in oklab, var(--text) 15%, transparent);
+    background: color-mix(in oklab, var(--text) 16%, transparent);
 
     border-radius: 12px;
 
@@ -261,4 +325,3 @@ def theme_css(mode: str = "light") -> str:
 </style>
 
 """
- 
