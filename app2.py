@@ -37,7 +37,7 @@ st.markdown(theme_css(), unsafe_allow_html=True)
 
 # -------- Single hero header with centered Cintas logo --------
 
-LOGO_SRC = "https://github.com/EJAgoba/Freight-Accrual-Application/blob/ac6c28692ea81eaa1660d5d5838125a0267b6e2e/cintas_logo.png"  # put your logo at this path or use a full https:// URL
+LOGO_SRC = "https://cintas1-my.sharepoint.com/:i:/r/personal/ejiro_agoba_cintas_com/Documents/cintas_logo.png?csf=1&web=1&e=fvFcIm"  # put your logo at this path or use a full https:// URL
 
 header_html = f"""
 <div class="app-header">
@@ -284,5 +284,6 @@ if file_kind == "Weekly Audit":
         except Exception as e:
 
             st.error(f"Weekly Audit accounting summary failed: {e}")
+
 
 
