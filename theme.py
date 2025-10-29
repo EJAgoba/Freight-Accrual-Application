@@ -12,7 +12,9 @@ def theme_css(mode: str = "light") -> str:
 
     """
 
-    Returns CSS for 'light' or 'dark'. Call with st.markdown(theme_css(mode), unsafe_allow_html=True)
+    Returns CSS for 'light' or 'dark'. Call with:
+
+      st.markdown(theme_css(mode), unsafe_allow_html=True)
 
     """
 
@@ -53,7 +55,9 @@ def theme_css(mode: str = "light") -> str:
 
   /* Layout + Typography */
 
-  .block-container {{ padding-top: 0.75rem; padding-bottom: 1.25rem; }}
+  /* Extra top padding fixes header clipping at some zoom/monitor combos */
+
+  main .block-container {{ padding-top: 2rem !important; padding-bottom: 1.25rem; }}
 
   html, body, [class^="stApp"] {{
 
@@ -63,7 +67,23 @@ def theme_css(mode: str = "light") -> str:
 
   }}
 
-  /* Header */
+  /* Make Streamlit's sticky header transparent so it never hides our header */
+
+  header[data-testid="stHeader"] {{
+
+    background: transparent !important;
+
+    border: 0 !important;
+
+    box-shadow: none !important;
+
+  }}
+
+  /* Tiny spacer utility for manual vertical breathing room */
+
+  .page-top-spacer {{ height: 8px; }}
+
+  /* App Header */
 
   .app-header {{
 
@@ -129,7 +149,7 @@ def theme_css(mode: str = "light") -> str:
 
   .stDownloadButton>button:hover {{ filter: brightness(0.96); transform: translateY(-1px); }}
 
-  /* Radios/Selects to pill style */
+  /* Radios/Selects – pill vibe */
 
   div[role="radiogroup"] > label, .stSelectbox > div > div {{
 
