@@ -8,9 +8,13 @@ import pandas as pd
 
 import streamlit as st
 
+# === Existing core module ===
+
 from redwood_accrual import render_redwood_accrual_ui
 
-from constants import APP_TITLE, APP_HEADER_HTML
+# === Modular imports ===
+
+from constants import APP_TITLE
 
 from theme import theme_css
 
@@ -24,45 +28,46 @@ from weekly_audit import WeeklyAuditBuilder
 
 from exporters import Exporter
 
-# ================= Page / Theme =================
+
+# ================= Page / Theme (light only) =================
 
 st.set_page_config(page_title=APP_TITLE, page_icon="💼", layout="wide")
 
-# Sidebar dark/light toggle
+st.markdown(theme_css(), unsafe_allow_html=True)
 
-if "ui_mode" not in st.session_state:
+# -------- Single hero header with centered Cintas logo --------
 
-    st.session_state.ui_mode = "dark"  # start in dark since you prefer it
+LOGO_SRC = "assets/cintas_logo.png"  # put your logo at this path or use a full https:// URL
 
-with st.sidebar:
+header_html = f"""
+<div class="app-header">
+<img class="app-logo" src="{LOGO_SRC}" alt="Cintas Logo">
+<div class="app-title">Accrual Re-Coding Tool</div>
+<div class="app-subtitle">Upload A3’s Accrual / Weekly Audit workbook. References auto-load from this folder.</div>
+</div>
 
-    st.markdown("### Appearance")
+"""
 
-    dark_on = st.toggle("Dark mode", value=(st.session_state.ui_mode == "dark"))
+st.markdown(header_html, unsafe_allow_html=True)
 
-    st.session_state.ui_mode = "dark" if dark_on else "light"
 
-# Inject theme CSS + spacer + hero header
-
-st.markdown(theme_css(st.session_state.ui_mode), unsafe_allow_html=True)
-
-st.markdown('<div class="page-top-spacer"></div>', unsafe_allow_html=True)
-
-st.markdown(APP_HEADER_HTML, unsafe_allow_html=True)
-
-# ================= Cached References =================
+# ================= Cached references =================
 
 @st.cache_data(show_spinner=False)
 
 def load_reference_tables():
 
+    """Loads: location_codes, MY LOCATION TABLE, and Complete Coding table."""
+
     return ReferenceLoader().load()
 
-# ================= Redwood Accrual (unchanged) =================
+
+# ================= Redwood Accrual =================
 
 render_redwood_accrual_ui(load_reference_tables, PipelineRunner().run)
 
-# ================= Accrual vs Weekly Audit =================
+
+# ================= Main: Accrual vs Weekly Audit =================
 
 st.header("Accrual and Weekly Audit Processing")
 
@@ -71,6 +76,8 @@ file_kind = st.radio("Select one:", ["Accrual", "Weekly Audit"], horizontal=True
 today = dt.date.today()
 
 if file_kind == "Accrual":
+
+    # default to previous month
 
     prev_month = (today.replace(day=1) - dt.timedelta(days=1))
 
@@ -88,7 +95,9 @@ if file_kind == "Accrual":
 
         sel_month = st.selectbox(
 
-            "Month", months,
+            "Month",
+
+            months,
 
             format_func=lambda m: calendar.month_abbr[m],
 
@@ -110,6 +119,8 @@ else:
 
         week_of_month = st.selectbox("Week of Month", [1, 2, 3, 4, 5], index=0)
 
+    # Weekly Audit allows multiple formats
+
     upload_types = ["txt", "text", "csv", "xlsx"]
 
 st.markdown("### Upload workbook")
@@ -121,6 +132,8 @@ if file is None:
     st.info(f"Upload your {'Accrual .xlsx' if file_kind=='Accrual' else 'Weekly Audit (.txt/.csv/.xlsx)'} file.")
 
     st.stop()
+
+# Read upload
 
 reader = UploadReader()
 
@@ -136,6 +149,8 @@ except Exception as e:
 
 st.info(f"Loaded **{len(input_df):,}** rows. Processing automatically…")
 
+# Load references
+
 try:
 
     location_codes, cintas_loc_tbl, complete_loc_tbl = load_reference_tables()
@@ -145,6 +160,8 @@ except Exception as e:
     st.error(f"Reference load error: {e}")
 
     st.stop()
+
+# Run pipeline
 
 runner = PipelineRunner()
 
@@ -162,6 +179,8 @@ with st.spinner("Running accrual re-coding…"):
 
 st.success(f"Done! Processed **{len(result_df):,}** rows.")
 
+# Build filenames
+
 if file_kind == "Accrual":
 
     mon_label = f"{calendar.month_abbr[sel_month]}-{sel_year}"
@@ -176,7 +195,9 @@ else:
 
 xlsx_name = f"{base_name}.xlsx"
 
-csv_name = f"{base_name}.csv"
+csv_name  = f"{base_name}.csv"
+
+# Downloads
 
 exporter = Exporter()
 
@@ -203,6 +224,8 @@ st.download_button(
     mime="text/csv",
 
 )
+
+# ================= Weekly Audit → Accounting Summary =================
 
 if file_kind == "Weekly Audit":
 
@@ -261,3 +284,5 @@ if file_kind == "Weekly Audit":
         except Exception as e:
 
             st.error(f"Weekly Audit accounting summary failed: {e}")
+For Sale Page
+ 
