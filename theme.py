@@ -12,17 +12,15 @@ def theme_css(mode: str = "light") -> str:
 
     """
 
-    Returns CSS for 'light' or 'dark' mode.
+    Returns CSS for 'light' or 'dark' mode with accessibility/contrast fixes.
 
-    Dark mode fixes:
+    Key fixes for dark mode:
 
-      - Deeper page background & cards
+      - High-contrast colors for widget labels (file uploader, radio)
 
-      - Higher-contrast text/subtitle
+      - Force text color inside file uploader
 
-      - Dark-styled inputs/selects/uploaders/radios
-
-      - Hero header tuned for dark
+      - Stronger section/field labels
 
     """
 
@@ -38,9 +36,11 @@ def theme_css(mode: str = "light") -> str:
 
       --uploader-bg:#ffffff; --uploader-border:{BORDER}; --uploader-fg:{TEXT_MUTED};
 
-      --heading:#0b1220;
+      --heading:#0b1220; --field-label:#111827;
 
     """
+
+    # Dark palette tweaks for readability
 
     dark_vars = f"""
 
@@ -52,9 +52,9 @@ def theme_css(mode: str = "light") -> str:
 
       --accent:{ACCENT}; --danger:{DANGER}; --ring:{D_RING};
 
-      --uploader-bg:#0d1726; --uploader-border:#223047; --uploader-fg:#9fb0c8;
+      --uploader-bg:#0d1726; --uploader-border:#223047; --uploader-fg:#cbd5e1;
 
-      --heading:#eaf1ff;
+      --heading:#eaf1ff; --field-label:#f3f4f6;
 
     """
 
@@ -73,7 +73,7 @@ def theme_css(mode: str = "light") -> str:
 
   main .block-container {{
 
-    padding-top: 2.5rem !important;  /* fixes header clipping */
+    padding-top: 2.5rem !important;  /* prevents header clipping */
 
     padding-bottom: 1.5rem;
 
@@ -129,9 +129,7 @@ def theme_css(mode: str = "light") -> str:
 
     content: "";
 
-    position: absolute;
-
-    inset: 0;
+    position: absolute; inset: 0;
 
     background:
 
@@ -231,11 +229,31 @@ def theme_css(mode: str = "light") -> str:
 
   /* ====== Inputs / Selects / Radios ====== */
 
+  /* Strong label color for field labels like "Select one:", "Select a file", etc. */
+
+  [data-testid="stWidgetLabel"], [data-testid="stWidgetLabel"] * {{
+
+    color: var(--field-label) !important;
+
+    opacity: 1 !important;
+
+  }}
+
+  /* Radio group: "Accrual / Weekly Audit" */
+
+  .stRadio, .stRadio label, .stRadio div[role="radiogroup"] *, .stRadio p {{
+
+    color: var(--field-label) !important;
+
+  }}
+
   div[role="radiogroup"] > label, .stSelectbox > div > div {{
 
     border-radius: 999px !important;
 
   }}
+
+  /* Inputs & selects */
 
   .stTextInput > div > div > input,
 
@@ -273,7 +291,7 @@ def theme_css(mode: str = "light") -> str:
 
   }}
 
-  /* ====== File Uploader (dark-friendly) ====== */
+  /* ====== File Uploader (dark-friendly & high-contrast text) ====== */
 
   [data-testid="stFileUploader"] > div {{
 
@@ -281,9 +299,15 @@ def theme_css(mode: str = "light") -> str:
 
     border: 1px dashed var(--uploader-border) !important;
 
-    color: var(--uploader-fg) !important;
-
     border-radius: 12px !important;
+
+  }}
+
+  /* Make ALL text inside the uploader readable in dark mode */
+
+  [data-testid="stFileUploader"] *:not(svg) {{
+
+    color: var(--uploader-fg) !important;
 
   }}
 
