@@ -1,170 +1,218 @@
+import io
+
 import pandas as pd
 
-from extract_codes import Extractor
+class WeeklyAuditBuilder:
 
-from address_merge import CombinedAddress
+    """Builds USD/CAD Accounting Summary tabs from edited Weekly Audit workbooks."""
 
-from address_crossref import Merger
+    # === helpers (no header normalization) ===
 
-from clean_codes import CodeFormatter
+    @staticmethod
 
-from map_types import TypeMapper, TypeCleaner
+    def _num(series: pd.Series) -> pd.Series:
 
-from matrix_map import MatrixMapper
+        s = series.astype(str)
 
-class PipelineRunner:
+        s = s.str.replace("(", "-", regex=False).str.replace(")", "", regex=False)
 
-    """Encapsulates the accrual recoding pipeline as a single callable."""
+        return pd.to_numeric(s, errors="coerce").fillna(0.0).round(2)
 
-    def run(
+    @staticmethod
 
-        self,
+    def _clean_acct(series: pd.Series) -> pd.Series:
 
-        accrual_df: pd.DataFrame,
+        s = series.astype(str).str.strip()
 
-        cintas_location_table: pd.DataFrame,
+        s = s.str.replace(r"\.0$", "", regex=True)
 
-        complete_location_table: pd.DataFrame,
+        s = s.str.replace(r"\..*$", "", regex=True)
 
-        location_codes: list[str],
+        return s
 
-    ) -> pd.DataFrame:
+    def build_currency_sheet(self, df: pd.DataFrame, force_currency: str, selected_run: str | None) -> pd.DataFrame:
 
-        # --- Extract Location Codes ---
+        required = [
 
-        extractor = Extractor()
+            "RunNumber", "Profit Center", "Cost Center",
 
-        extractor.create_columns(accrual_df)
-
-        extractor.lower_columns(accrual_df, 'Consignor', 'Consignee')
-
-        extractor.prefill_from_loc_columns(accrual_df, location_codes)
-
-        extractor.extract1(accrual_df, 'Consignor', 'Consignor Code', location_codes, only_null=True)
-
-        extractor.extract1(accrual_df, 'Consignee', 'Consignee Code', location_codes, only_null=True)
-
-        # --- Combined Address ---
-
-        combined_address = CombinedAddress()
-
-        combined_address.create_combined_address_accrual(
-
-            cintas_location_table, 'Combined Address', 'Loc_Address', 'Loc_City', 'Loc_ST'
-
-        )
-
-        combined_address.create_combined_address_accrual(
-
-            accrual_df, 'Consignee Combined Address', 'Dest Address1', 'Dest City', 'Dest State Code'
-
-        )
-
-        combined_address.create_combined_address_accrual(
-
-            accrual_df, 'Consignor Combined Address', 'Origin Addresss', 'Origin City', 'Origin State Code'
-
-        )
-
-        cintas_location_table['Combined Address'] = cintas_location_table['Combined Address'].astype(str).str.upper()
-
-        accrual_df['Consignee Combined Address']  = accrual_df['Consignee Combined Address'].astype(str).str.upper()
-
-        accrual_df['Consignor Combined Address']  = accrual_df['Consignor Combined Address'].astype(str).str.upper()
-
-        # --- Cross reference the combined address ---
-
-        merger = Merger()
-
-        accrual_df = merger.merge(accrual_df, cintas_location_table, 'Consignor Code')
-
-        accrual_df = merger.merge(accrual_df, cintas_location_table, 'Consignee Code')
-
-        # --- Clean up the codes ---
-
-        formatter = CodeFormatter()
-
-        accrual_df = formatter.pad_codes(accrual_df, 'Consignor Code', 'Consignee Code')
-
-        # --- Populate Type Codes ---
-
-        type_mapper = TypeMapper()
-
-        accrual_df = type_mapper.map_types(accrual_df, cintas_location_table, 'Consignor Code', 'Consignor Type')
-
-        accrual_df = type_mapper.map_types(accrual_df, cintas_location_table, 'Consignee Code', 'Consignee Type')
-
-        cleaner = TypeCleaner()
-
-        accrual_df = cleaner.fill_non_cintas(accrual_df, 'Consignor Type', 'Consignee Type')
-
-        # --- Matrix mapping for Assigned Location Code ---
-
-        matrix_mapper = MatrixMapper()
-
-        accrual_df['Assigned Location Code'] = accrual_df.apply(matrix_mapper.determine_profit_center, axis=1)
-
-        # --- Join profit/cost centers from complete location table ---
-
-        accrual_df = accrual_df.merge(
-
-            complete_location_table[['Loc Code', 'Prof_Cntr', 'Cost_Cntr']],
-
-            left_on='Assigned Location Code',
-
-            right_on='Loc Code',
-
-            how='left'
-
-        )
-
-        accrual_df.rename(columns={'Prof_Cntr': 'Profit Center EJ', 'Cost_Cntr': 'Cost Center EJ'}, inplace=True)
-
-        # --- Account # EJ rule ---
-
-        accrual_df['Account # EJ'] = accrual_df.apply(
-
-            lambda row: 621000 if 'G59' in str(row.get('Profit Center EJ', ''))
-
-            else (621000 if row.get('Consignee Code') == row.get('Assigned Location Code') else 621020),
-
-            axis=1
-
-        )
-
-        # --- De-dupe on Invoice Number + Paid Amount ---
-
-        if {'Invoice Number', 'Paid Amount'}.issubset(accrual_df.columns):
-
-            accrual_df = accrual_df.drop_duplicates(subset=['Invoice Number', 'Paid Amount'])
-
-        # Automation Accuracy
-
-        accrual_df['Profit Center'] = accrual_df['Profit Center'].astype("string")
-
-        accrual_df['Profit Center EJ'] = accrual_df['Profit Center EJ'].astype("string")
-
-        accrual_df['Automation Accuracy'] = accrual_df.apply(
-
-            lambda row: (1 if (pd.notna(row['Profit Center']) and pd.notna(row['Profit Center EJ'])
-
-                               and row['Profit Center'] == row['Profit Center EJ']) else 0), axis=1
-
-        )
-
-        # --- Column ordering (if present) ---
-
-        first_cols = [
-
-            'Profit Center', 'Cost Center', 'Account #', 'Automation Accuracy',
-
-            'Profit Center EJ', 'Cost Center EJ', 'Account # EJ'
+            "Account #", "Currency", "Total Paid Minus Duty and CAD Tax"
 
         ]
 
-        ordered = [c for c in first_cols if c in accrual_df.columns] + [c for c in accrual_df.columns if c not in first_cols]
+        for col in required:
 
-        accrual_df = accrual_df[ordered]
+            if col not in df.columns:
 
-        return accrual_df
+                raise ValueError(f"Edited sheet missing required column: '{col}'")
+
+        paid_col = "Paid" if "Paid" in df.columns else ("Paid Amount" if "Paid Amount" in df.columns else None)
+
+        if not paid_col:
+
+            raise ValueError("Missing 'Paid' or 'Paid Amount' column.")
+
+        if selected_run:
+
+            df = df[df["RunNumber"].astype(str).str.strip() == str(selected_run).strip()]
+
+            if df.empty:
+
+                raise ValueError(f"No rows found for RunNumber {selected_run}")
+
+        base = pd.DataFrame({
+
+            "Run Number":  df["RunNumber"].astype(str).str.strip(),
+
+            "Profit Center": df["Profit Center"].astype(str).str.strip(),
+
+            "Cost Center":   df["Cost Center"].astype(str).str.strip(),
+
+            "Account #":     self._clean_acct(df["Account #"]),
+
+            "Currency":      df["Currency"].astype(str).str.upper().str.strip(),
+
+            "Amount":        self._num(df["Total Paid Minus Duty and CAD Tax"]),
+
+        })
+
+        header_amount = round(-self._num(df[paid_col]).sum(), 2)
+
+        header = {
+
+            "Run Number": str(selected_run or (df["RunNumber"].astype(str).str.strip().iloc[0] if not df.empty else "")),
+
+            "Profit Center": "686",
+
+            "Cost Center": "",
+
+            "Order": "",
+
+            "Account #": "240400",
+
+            "Bus. Area": "",
+
+            "Segment": "",
+
+            "Currency": force_currency,
+
+            "Amount": header_amount,
+
+        }
+
+        tax_specs = [
+
+            ("GST/PST Paid", "GST/PST Account #", "203063"),
+
+            ("HST Paid",     "HST Account #",     "203064"),
+
+            ("QST Paid",     "QST Account #",     "203065"),
+
+            ("Duty Paid",    "Duty Account #",    "621010"),
+
+        ]
+
+        tax_frames = []
+
+        for paid_name, acct_name, default_acct in tax_specs:
+
+            if paid_name in df.columns:
+
+                amt = self._num(df[paid_name])
+
+                mask = amt != 0
+
+                if mask.any():
+
+                    acct_series = self._clean_acct(df[acct_name]) if acct_name in df.columns else pd.Series([""] * len(df), index=df.index)
+
+                    if default_acct is not None:
+
+                        acct_series = acct_series.where(acct_series.replace("", pd.NA).notna(), other=default_acct)
+
+                    tax_frames.append(pd.DataFrame({
+
+                        "Run Number":  df.loc[mask, "RunNumber"].astype(str).str.strip(),
+
+                        "Profit Center": df.loc[mask, "Profit Center"].astype(str).str.strip(),
+
+                        "Cost Center":   df.loc[mask, "Cost Center"].astype(str).str.strip(),
+
+                        "Account #":     self._clean_acct(acct_series.loc[mask]),
+
+                        "Currency":      force_currency,
+
+                        "Amount":        amt.loc[mask].round(2),
+
+                    }))
+
+        combined = pd.concat([base] + tax_frames, ignore_index=True) if tax_frames else base
+
+        grouped = (
+
+            combined.groupby(["Profit Center","Cost Center","Account #","Currency"], dropna=False, as_index=False)["Amount"]
+
+                    .sum()
+
+        )
+
+        grouped["Account #"] = self._clean_acct(grouped["Account #"])
+
+        for c in ["Order","Bus. Area","Segment"]:
+
+            grouped[c] = ""
+
+        out_run = header["Run Number"]
+
+        grouped["Run Number"] = out_run
+
+        grouped["Amount"] = grouped["Amount"].round(2)
+
+        out_df = pd.concat([pd.DataFrame([header]), grouped], ignore_index=True)
+
+        out_df = out_df[["Run Number","Profit Center","Cost Center","Order","Account #","Bus. Area","Segment","Currency","Amount"]]
+
+        out_df["Account #"] = self._clean_acct(out_df["Account #"])
+
+        return out_df
+
+    @staticmethod
+
+    def pack_accounting_summary(usd_df: pd.DataFrame, cad_df: pd.DataFrame) -> bytes:
+
+        """Export USD & CAD sheets with Account # as TEXT (no .0)."""
+
+        bio = io.BytesIO()
+
+        with pd.ExcelWriter(
+
+            bio, engine="xlsxwriter",
+
+            engine_kwargs={"options": {"strings_to_numbers": False}}
+
+        ) as writer:
+
+            usd_df.to_excel(writer, index=False, sheet_name="USD")
+
+            cad_df.to_excel(writer, index=False, sheet_name="CAD")
+
+            wb = writer.book
+
+            text_fmt = wb.add_format({'num_format': '@'})
+
+            for sheet_name, df_out in {"USD": usd_df, "CAD": cad_df}.items():
+
+                ws = writer.sheets[sheet_name]
+
+                acct_idx = df_out.columns.get_loc("Account #")
+
+                ws.set_column(acct_idx, acct_idx, None, text_fmt)
+
+                for r, val in enumerate(df_out["Account #"].astype(str).tolist(), start=1):
+
+                    ws.write_string(r, acct_idx, val)
+
+        bio.seek(0)
+
+        return bio.read()
  
