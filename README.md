@@ -18,40 +18,40 @@ This process — once manual and time-consuming — now completes in seconds.
 All files are modular and must remain in the same folder as `app.py`.
 ```text
 📦 Freight-Accrual-Application/
-├── 📘 MY LOCATION TABLE.xlsx              # Master list of all Cintas locations
-├── 📘 Coding_CintasLocation 02.06.25.xlsx # Profit & Cost Center mapping
-├── 📘 all_location_codes.xlsx              # Valid 4-char Cintas codes (any accepted name)
+├── MY LOCATION TABLE.xlsx              # Master list of all Cintas locations
+├── Coding_CintasLocation 02.06.25.xlsx # Profit & Cost Center mapping
+├── all_location_codes.xlsx              # Valid 4-char Cintas codes (any accepted name)
 │
-├── 📄 README.md                           # Full project documentation
-├── ⚙️ requirements.txt                    # Python dependencies list
+├── README.md                           # Full project documentation
+├── requirements.txt                    # Python dependencies list
 │
-├── 🧠 app.py                              # Main Streamlit interface (modern UI, dark/light theme)
-├── 🧠 app2.py                             # Backup/test version
+├── app.py                              # Backup/test version
+├── app2.py                             # Main Streamlit interface (modern UI, dark/light theme)
 │
-├── 🧩 constants.py                        # Branding, reusable constants
-├── 🎨 theme.py                            # CSS theme (light/dark + header + uploaders)
-├── 📚 references.py                       # Loads and caches Excel reference files
-├── 📤 upload_readers.py                   # Reads uploads (.xlsx/.csv/.txt) with delimiter detection
-├── 📦 exporters.py                        # Builds Excel/CSV downloads (xlsxwriter + openpyxl)
-├── ⚙️ pipeline.py                         # Central pipeline for Accrual logic
-├── 🧾 weekly_audit.py                     # Builds Weekly Audit Accounting Summary (USD/CAD)
-├── 🧮 redwood_accrual.py                  # Redwood Accrual pre-processing interface
+├── constants.py                        # Branding, reusable constants
+├── theme.py                            # CSS theme (light/dark + header + uploaders)
+├── references.py                       # Loads and caches Excel reference files
+├── upload_readers.py                   # Reads uploads (.xlsx/.csv/.txt) with delimiter detection
+├── exporters.py                        # Builds Excel/CSV downloads (xlsxwriter + openpyxl)
+├── pipeline.py                         # Central pipeline for Accrual logic
+├── weekly_audit.py                     # Builds Weekly Audit Accounting Summary (USD/CAD)
+├── redwood_accrual.py                  # Redwood Accrual pre-processing interface
 │
-├── 🧱 extract_codes.py                    # Step 1: Extracts 4-character location codes
-├── 🧱 address_merge.py                    # Step 2: Builds Combined Address
-├── 🧱 address_crossref.py                 # Step 3: Cross-references addresses to MY LOCATION TABLE
-├── 🧱 clean_codes.py                      # Step 4: Cleans/pads/normalizes codes
-├── 🧱 map_types.py                        # Step 5: Maps Cintas Type (US DC, LC, MFG, etc.)
-├── 🧱 matrix_map.py                       # Step 6: Applies matrix logic for Assigned Location Code
-├── 🧱 coding_matrix.py                    # Optional: Holds special routing logic & mappings
+├── extract_codes.py                    # Step 1: Extracts 4-character location codes
+├── address_merge.py                    # Step 2: Builds Combined Address
+├── address_crossref.py                 # Step 3: Cross-references addresses to MY LOCATION TABLE
+├── clean_codes.py                      # Step 4: Cleans/pads/normalizes codes
+├── map_types.py                        # Step 5: Maps Cintas Type (US DC, LC, MFG, etc.)
+├── matrix_map.py                       # Step 6: Applies matrix logic for Assigned Location Code
+├── coding_matrix.py                    # Optional: Holds special routing logic & mappings
 │
-├── 🔧 location_codes.py                   # Utility helpers for code list validation
-├── 🔧 io_utils.py                         # Shared I/O helpers used across modules
+├── location_codes.py                   # Utility helpers for code list validation
+├── io_utils.py                         # Shared I/O helpers used across modules
 │
-├── 🖼️ cintas_logo.png                     # Optional logo for UI/header branding
-└── 📁 assets/                             # Optional folder for alternate reference file storage
+├── cintas_logo.png                     # Optional logo for UI/header branding
+└── assets/                             # Optional folder for alternate reference file storage
 ```
-## 🧠 What the Tool Does
+## What the Tool Does
 - Cleans raw spreadsheets from **A3 Freight** (Accrual + Weekly Audit)
 - Extracts **location codes**, even if embedded in text
 - Uses address matching when codes are missing
@@ -61,7 +61,7 @@ All files are modular and must remain in the same folder as `app.py`.
 - Flags duplicates and automation accuracy
 - Outputs **validated Excel/CSV** for upload
 ---
-## 📂 Reference Files
+## Reference Files
 These are auto-loaded by `references.py`. All must be in the **same folder** as `app.py`.
 | File | Purpose | Key Columns |
 |------|----------|-------------|
@@ -70,7 +70,7 @@ These are auto-loaded by `references.py`. All must be in the **same folder** as 
 | **Location Codes.xlsx** *(or any variant)* | Full list of valid 4-char codes (`0K35`, `024P`) | `Loc Code` |
 > Accepted variants: `Location Codes.xlsx`, `LOCATION_CODES.xlsx`, `location_codes.xlsx`, `LocationCodes.xlsx`, or `all_location_codes.xlsx`
 ---
-## 🎨 User Interface
+## User Interface
 **Theme:**  
 - Supports **dark/light mode**  
 - Gradient header with logo and rounded design  
@@ -83,7 +83,7 @@ These are auto-loaded by `references.py`. All must be in the **same folder** as 
 4. Auto-processing spinner  
 5. Download buttons for XLSX and CSV  
 ---
-## ⚙️ Accrual Pipeline (Step-by-Step)
+## Accrual Pipeline (Step-by-Step)
 ### 1. Extract Location Codes (`extract_codes.py`)
 Finds valid 4-char codes (e.g., `0K35`) from Consignor and Consignee text.
 | Consignee | Extracted Code |
@@ -154,7 +154,7 @@ Final output includes:
 | Automation Accuracy | 1 = match / 0 = different |
 | Assigned Location Code | Final location assignment |
 ---
-## 🧾 Weekly Audit → Accounting Summary
+## Weekly Audit → Accounting Summary
 When running **Weekly Audit mode**, the app:
 1. Reads both **USD** and **CAD** sheets  
 2. Calculates header and detail totals  
@@ -173,7 +173,7 @@ Tax Mappings:
 Output filename example:  
 `Weekly Audit Batch 2345 Sep-2025-W4 – Accounting Summary (Run 2345).xlsx`
 ---
-## 📤 Exports
+## Exports
 **Accrual Mode**
 - `Accrual Sep-2025.xlsx`
 - `Accrual Sep-2025.csv`
@@ -181,14 +181,14 @@ Output filename example:
 - `Weekly Audit Batch {Batch} {Month-YYYY}-W{Week}.xlsx`
 - `Weekly Audit Batch {Batch} {Month-YYYY} – Accounting Summary.xlsx`
 ---
-## 🧮 Quality Checks
+## Quality Checks
 | Metric | Target |
 |---------|---------|
 | Assigned Location Code found | 100% |
 | Automation Accuracy | ≥ 95% |
 | Account # Consistency | 621000 (Internal) / 621020 (External) |
 ---
-## 🧰 Troubleshooting
+## Troubleshooting
 **“Reference load error: Missing required file”**  
 → Ensure `MY LOCATION TABLE.xlsx`, `Coding_CintasLocation 02.06.25.xlsx`, and your `all_location_codes.xlsx` are beside `app.py`.
 **“Location Codes Excel not found … Expected one of …”**  
@@ -198,7 +198,7 @@ Output filename example:
 **Account # column turns scientific in Excel**  
 → Always use the generated **.xlsx** version; it forces text formatting.
 ---
-## 📘 Glossary
+## Glossary
 | Term | Meaning |
 |------|----------|
 | **Consignor** | Shipment origin |
@@ -210,7 +210,7 @@ Output filename example:
 | **Assigned Location Code** | Final posting site |
 | **Automation Accuracy** | 1 = match, 0 = different |
 ---
-## 🧱 Module Summary
+## Module Summary
 | File | Purpose |
 |------|----------|
 | `app.py` | Main Streamlit entrypoint |
@@ -233,12 +233,12 @@ Output filename example:
 | `io_utils.py` | Common IO utilities |
 | `location_codes.py` | Code validation helpers |
 ---
-## 🔒 Security & Privacy
+## Security & Privacy
 - No data leaves your local environment or Streamlit Cloud workspace.  
 - Reference files stay internal to Cintas and should not be shared externally.  
 - Always sanitize test data before public demo uploads.
 ---
-## 🕒 Change Log
+## Change Log
 **v2.0 (2025)**  
 - Modular architecture (each step split into its own file)  
 - New theme with dark/light mode  
