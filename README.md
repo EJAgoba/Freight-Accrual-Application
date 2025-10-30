@@ -16,40 +16,41 @@ This process — once manual and time-consuming — now completes in seconds.
 ---
 ## 🧩 Repository Structure
 All files are modular and must remain in the same folder as `app.py`.
-.
-├── MY LOCATION TABLE.xlsx                  # Master site list
-├── Coding_CintasLocation 02.06.25.xlsx     # Profit/Cost mapping
-├── all_location_codes.xlsx                 # Valid 4-char Cintas codes (any accepted name works)
+
+📦 Freight-Accrual-Application/
+├── 📘 MY LOCATION TABLE.xlsx              # Master list of all Cintas locations
+├── 📘 Coding_CintasLocation 02.06.25.xlsx # Profit & Cost Center mapping
+├── 📘 all_location_codes.xlsx              # Valid 4-char Cintas codes (any accepted name)
 │
-├── README.md                               # This documentation
-├── requirements.txt                        # Dependencies list
+├── 📄 README.md                           # Full project documentation
+├── ⚙️ requirements.txt                    # Python dependencies list
 │
-├── app.py                                  # Main Streamlit interface (modern theme, auto-flow)
-├── app2.py                                 # Backup / test app version
+├── 🧠 app.py                              # Main Streamlit interface (modern UI, dark/light theme)
+├── 🧠 app2.py                             # Backup/test version
 │
-├── constants.py                            # Branding, paths, reusable constants
-├── theme.py                                # CSS theme (dark/light + header + uploaders)
-├── references.py                           # Safely loads and caches all Excel reference files
-├── upload_readers.py                       # Reads uploads (.xlsx, .csv, .txt) with delimiter detection
-├── exporters.py                            # Builds Excel/CSV downloads (xlsxwriter & openpyxl)
-├── pipeline.py                             # Central pipeline orchestrator for Accrual files
-├── weekly_audit.py                         # Accounting Summary logic (USD & CAD tabs)
-├── redwood_accrual.py                      # Redwood Accrual pre-processing interface
+├── 🧩 constants.py                        # Branding, reusable constants
+├── 🎨 theme.py                            # CSS theme (light/dark + header + uploaders)
+├── 📚 references.py                       # Loads and caches Excel reference files
+├── 📤 upload_readers.py                   # Reads uploads (.xlsx/.csv/.txt) with delimiter detection
+├── 📦 exporters.py                        # Builds Excel/CSV downloads (xlsxwriter + openpyxl)
+├── ⚙️ pipeline.py                         # Central pipeline for Accrual logic
+├── 🧾 weekly_audit.py                     # Builds Weekly Audit Accounting Summary (USD/CAD)
+├── 🧮 redwood_accrual.py                  # Redwood Accrual pre-processing interface
 │
-├── extract_codes.py                        # Step 1: Extracts 4-char location codes
-├── address_merge.py                        # Step 2: Builds Combined Address
-├── address_crossref.py                     # Step 3: Cross-references addresses to master table
-├── clean_codes.py                          # Step 4: Cleans/pads/normalizes codes
-├── map_types.py                            # Step 5: Maps Cintas Type (US DC, LC, MFG, etc.)
-├── matrix_map.py                           # Step 6: Applies matrix logic for Assigned Location Code
-├── coding_matrix.py                        # (Optional) Holds special routing logic and mappings
+├── 🧱 extract_codes.py                    # Step 1: Extracts 4-character location codes
+├── 🧱 address_merge.py                    # Step 2: Builds Combined Address
+├── 🧱 address_crossref.py                 # Step 3: Cross-references addresses to MY LOCATION TABLE
+├── 🧱 clean_codes.py                      # Step 4: Cleans/pads/normalizes codes
+├── 🧱 map_types.py                        # Step 5: Maps Cintas Type (US DC, LC, MFG, etc.)
+├── 🧱 matrix_map.py                       # Step 6: Applies matrix logic for Assigned Location Code
+├── 🧱 coding_matrix.py                    # Optional: Holds special routing logic & mappings
 │
-├── location_codes.py                       # Utility helpers for code lists and validation
-├── io_utils.py                             # Shared read/write helpers (used by modules)
+├── 🔧 location_codes.py                   # Utility helpers for code list validation
+├── 🔧 io_utils.py                         # Shared I/O helpers used across modules
 │
-├── cintas_logo.png                         # Optional logo for branding / header
-└── assets/                                 # Folder for alternate reference file storage
----
+├── 🖼️ cintas_logo.png                     # Optional logo for UI/header branding
+└── 📁 assets/                             # Optional folder for alternate reference file storage
+
 ## 🧠 What the Tool Does
 - Cleans raw spreadsheets from **A3 Freight** (Accrual + Weekly Audit)
 - Extracts **location codes**, even if embedded in text
