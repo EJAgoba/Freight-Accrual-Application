@@ -71,7 +71,6 @@ These are auto-loaded by `references.py`. All must be in the **same folder** as 
 ---
 ## User Interface
 **Theme:**  
-- Supports **dark/light mode**  
 - Gradient header with logo and rounded design  
 - Upload buttons & radio selectors fully visible in dark mode  
 - Responsive top padding (no clipping)
@@ -87,8 +86,8 @@ These are auto-loaded by `references.py`. All must be in the **same folder** as 
 Finds valid 4-char codes (e.g., `0K35`) from Consignor and Consignee text.
 | Consignee | Extracted Code |
 |------------|----------------|
-| Cintas 0K35 Receiving Dock | 0K35 |
-| Millennium 024P Loading | 024P |
+| Cintas K35 | K35 |
+| Millennium 037Q | 037Q |
 ---
 ### 2. Build Combined Address (`address_merge.py`)
 Creates `Combined Address` = Address + City + State → used for matching.
