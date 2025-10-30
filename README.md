@@ -98,7 +98,7 @@ Creates `Combined Address` = Address + City + State → used for matching.
 ### 3. Cross-Reference Addresses (`address_crossref.py`)
 Matches `Combined Address` against **MY LOCATION TABLE.xlsx** to fill missing **Consignor Code** or **Consignee Code** (only when blank).
 ---
-### 4. Clean Codes (`clean_codes.py`)
+### 4. Clean Codes (clean_codes.py)
 Standardizes capitalization and padding.  
 Example: 24P → 024P, ok35 → 0K35
 ---
