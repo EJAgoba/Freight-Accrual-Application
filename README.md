@@ -2,23 +2,22 @@
 ### Streamlit Application for Automated Freight Accrual Processing  
 **Version:** v2.0 (Modular, Dark/Light UI Edition)
 ---
-## 💼 Overview
+## Overview
 The **Accrual Re-Coding Tool** automates how Cintas processes and codes freight files from A3 — both **Accrual** and **Weekly Audit** reports.
 It reads spreadsheets, detects missing codes, maps Profit/Cost Centers, applies Account # rules, and exports **clean, audit-ready workbooks**.  
 This process — once manual and time-consuming — now completes in seconds.
-## 🚀 Core Features
+## Core Features
 - Automatically fills missing **Location Codes**
 - Applies official **Profit & Cost Center** logic
-- Determines **Account # EJ** using built-in business rules
+- Determines **Account #** using built-in business rules
 - Generates **Weekly Audit Accounting Summary (USD/CAD)**
-- Supports **modern dark/light Streamlit UI** with responsive layout
 - Uses a **modular architecture** — each Python file serves a single purpose
 - Exports **clean, coded, audit-ready workbooks** in Excel and CSV
 ---
 
 All files are modular and must remain in the same folder as `app.py`.
 ```text
-📦 Freight-Accrual-Application/
+Freight-Accrual-Application/
 ├── MY LOCATION TABLE.xlsx              # Master list of all Cintas locations
 ├── Coding_CintasLocation 02.06.25.xlsx # Profit & Cost Center mapping
 ├── all_location_codes.xlsx              # Valid 4-char Cintas codes (any accepted name)
