@@ -50,7 +50,7 @@ All files are modular and must remain in the same folder as `app.py`.
 │
 ├── 🖼️ cintas_logo.png                     # Optional logo for UI/header branding
 └── 📁 assets/                             # Optional folder for alternate reference file storage
-
+```
 ## 🧠 What the Tool Does
 - Cleans raw spreadsheets from **A3 Freight** (Accrual + Weekly Audit)
 - Extracts **location codes**, even if embedded in text
