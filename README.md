@@ -188,14 +188,14 @@ Output filename example:
 | Account # Consistency | 621000 (Internal) / 621020 (External) |
 ---
 ## Troubleshooting
-**“Reference load error: Missing required file”**  
-→ Ensure `MY LOCATION TABLE.xlsx`, `Coding_CintasLocation 02.06.25.xlsx`, and your `all_location_codes.xlsx` are beside `app.py`.
+**“Reference load error: Missing required file”**
+- Ensure `MY LOCATION TABLE.xlsx`, `Coding_CintasLocation 02.06.25.xlsx`, and your `all_location_codes.xlsx` are beside `app.py`.
 **“Location Codes Excel not found … Expected one of …”**  
-→ Rename your location codes file to match one of the valid names.
+- Rename your location codes file to match one of the valid names.
 **UI header looks clipped**  
-→ The latest `theme.py` adds top padding and spacer; refresh cache or reset zoom.
+- The latest `theme.py` adds top padding and spacer; refresh cache or reset zoom.
 **Account # column turns scientific in Excel**  
-→ Always use the generated **.xlsx** version; it forces text formatting.
+- Always use the generated **.xlsx** version; it forces text formatting.
 ---
 ## Glossary
 | Term | Meaning |
