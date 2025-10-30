@@ -1,5 +1,4 @@
 # Cintas Logistics — Accrual Re-Coding Tool
-### Plain-English Documentation (Updated for Modular, Dark/Light Mode Edition)
 ---
 ## Overview
 The **Cintas Accrual Re-Coding Tool** automatically cleans, validates, and codes freight accrual and weekly audit files received from A3.  
