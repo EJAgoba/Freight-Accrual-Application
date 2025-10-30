@@ -26,19 +26,14 @@ All reference files must be stored in the same folder as **app.py** (whether loc
 | **Location Codes.xlsx** | Full list of valid 4-character location codes (e.g., `0K35`, `024P`, `067N`). | `Loc Code` |
 > These reference files rarely change. Update them only when new locations are added or accounting structures are modified.
 ---
-## User Interface (New Features)
-### 1. Modern Theme
-- Light and dark modes available via sidebar toggle  
-- Gradient Cintas blue header with subtle glow  
-- Rounded buttons and cards  
-- Responsive padding to prevent clipping on all displays  
-### 2. Header Section
+## User Interface
+### 1. Header and Redwood Accrual Section
 - **Title:** “Cintas Logistics — Accrual Re-Coding Tool”  
 - **Subtitle:** “Upload A3’s Accrual/Weekly Audit workbook. References auto-load from this folder.”  
-- **Mode Selector:** Choose between *Accrual* or *Weekly Audit* workflows  
-### 3. Redwood Accrual Section
 - Dedicated space for pre-processing raw Redwood data before re-coding  
-- Accepts `.txt`, `.csv`, or `.xlsx` files and prepares them for the main pipeline  
+- Accepts `.txt`, `.csv`, or `.xlsx` files and prepares them for the main pipeline
+### 2. Accrual and Weekly Audit Files
+- **Mode Selector:** Choose between *Accrual* or *Weekly Audit* workflows  
 ---
 ## How the Tool Works (Step-by-Step)
 Each major process runs as a self-contained **module** for easier debugging and maintenance.
