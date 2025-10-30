@@ -1,150 +1,251 @@
 # Cintas Logistics — Accrual Re-Coding Tool
+### Streamlit Application for Automated Freight Accrual Processing  
+**Version:** v2.0 (Modular, Dark/Light UI Edition)
 ---
-## Overview
-The **Cintas Accrual Re-Coding Tool** automatically cleans, validates, and codes freight accrual and weekly audit files received from A3.  
-It replaces hours of manual work every month by handling data cleanup, code assignment, and accounting alignment in just seconds.
-### What the Tool Does
-- Cleans and formats messy spreadsheets into standardized audit-ready outputs  
-- Detects missing **Location Codes** and fills them automatically  
-- Applies **Profit Center**, **Cost Center**, and **Account Number** logic  
-- Ensures data aligns with **Cintas Accounting standards**  
-- Produces clean, validated Excel and CSV exports ready for submission or upload  
-The app now features a **modern interface** with:
-- Light/dark mode toggle  
-- Gradient hero header with clear branding  
-- Rounded buttons and cards  
-- Responsive padding to prevent clipping on all displays  
-- Separate modes for **Accrual** and **Weekly Audit**  
-- Optional **Redwood Accrual** module for pre-processing  
+## 💼 Overview
+The **Accrual Re-Coding Tool** automates how Cintas processes and codes freight files from A3 — both **Accrual** and **Weekly Audit** reports.
+It reads spreadsheets, detects missing codes, maps Profit/Cost Centers, applies Account # rules, and exports **clean, audit-ready workbooks**.  
+This process — once manual and time-consuming — now completes in seconds.
+### Core Features
+✅ Auto-fills missing **Location Codes**  
+✅ Applies official **Profit & Cost Center** logic  
+✅ Determines **Account # EJ** via business rules  
+✅ Generates **Weekly Audit Accounting Summary (USD/CAD)**  
+✅ Modern, dark/light **Streamlit UI** with responsive layout  
+✅ Modularized architecture (each file = single purpose)
 ---
-## Files the Tool Uses
-All reference files must be stored in the same folder as **app.py** (whether locally or on your shared drive).
+## 🧩 Repository Structure
+All files are modular and must remain in the same folder as `app.py`.
+.
+├── MY LOCATION TABLE.xlsx                  # Master site list
+├── Coding_CintasLocation 02.06.25.xlsx     # Profit/Cost mapping
+├── all_location_codes.xlsx                 # Valid 4-char Cintas codes (any accepted name works)
+│
+├── README.md                               # This documentation
+├── requirements.txt                        # Dependencies list
+│
+├── app.py                                  # Main Streamlit interface (modern theme, auto-flow)
+├── app2.py                                 # Backup / test app version
+│
+├── constants.py                            # Branding, paths, reusable constants
+├── theme.py                                # CSS theme (dark/light + header + uploaders)
+├── references.py                           # Safely loads and caches all Excel reference files
+├── upload_readers.py                       # Reads uploads (.xlsx, .csv, .txt) with delimiter detection
+├── exporters.py                            # Builds Excel/CSV downloads (xlsxwriter & openpyxl)
+├── pipeline.py                             # Central pipeline orchestrator for Accrual files
+├── weekly_audit.py                         # Accounting Summary logic (USD & CAD tabs)
+├── redwood_accrual.py                      # Redwood Accrual pre-processing interface
+│
+├── extract_codes.py                        # Step 1: Extracts 4-char location codes
+├── address_merge.py                        # Step 2: Builds Combined Address
+├── address_crossref.py                     # Step 3: Cross-references addresses to master table
+├── clean_codes.py                          # Step 4: Cleans/pads/normalizes codes
+├── map_types.py                            # Step 5: Maps Cintas Type (US DC, LC, MFG, etc.)
+├── matrix_map.py                           # Step 6: Applies matrix logic for Assigned Location Code
+├── coding_matrix.py                        # (Optional) Holds special routing logic and mappings
+│
+├── location_codes.py                       # Utility helpers for code lists and validation
+├── io_utils.py                             # Shared read/write helpers (used by modules)
+│
+├── cintas_logo.png                         # Optional logo for branding / header
+└── assets/                                 # Folder for alternate reference file storage
+---
+## 🧠 What the Tool Does
+- Cleans raw spreadsheets from **A3 Freight** (Accrual + Weekly Audit)
+- Extracts **location codes**, even if embedded in text
+- Uses address matching when codes are missing
+- Classifies site type (US DC, LC, MFG, etc.)
+- Applies **matrix logic** to assign chargeable location
+- Links to **Profit Center**, **Cost Center**, and **Account #**
+- Flags duplicates and automation accuracy
+- Outputs **validated Excel/CSV** for upload
+---
+## 📂 Reference Files
+These are auto-loaded by `references.py`. All must be in the **same folder** as `app.py`.
 | File | Purpose | Key Columns |
 |------|----------|-------------|
-| **MY LOCATION TABLE.xlsx** | Master list of all Cintas locations. | `Loc Code`, `Loc_Address`, `Loc_City`, `Loc_ST`, `Type` |
-| **Coding_CintasLocation 02.06.25.xlsx** | Links each `Loc Code` to its Profit and Cost Centers. | `Loc Code`, `Prof_Cntr`, `Cost_Cntr` |
-| **Location Codes.xlsx** | Full list of valid 4-character location codes (e.g., `0K35`, `024P`, `067N`). | `Loc Code` |
-> These reference files rarely change. Update them only when new locations are added or accounting structures are modified.
+| **MY LOCATION TABLE.xlsx** | Official Cintas location master | `Loc Code`, `Loc_Address`, `Loc_City`, `Loc_ST`, `Type` |
+| **Coding_CintasLocation 02.06.25.xlsx** | Profit & Cost Center mapping | `Loc Code`, `Prof_Cntr`, `Cost_Cntr` |
+| **Location Codes.xlsx** *(or any variant)* | Full list of valid 4-char codes (`0K35`, `024P`) | `Loc Code` |
+> Accepted variants: `Location Codes.xlsx`, `LOCATION_CODES.xlsx`, `location_codes.xlsx`, `LocationCodes.xlsx`, or `all_location_codes.xlsx`
 ---
-## User Interface
-### 1. Header and Redwood Accrual Section
-- **Title:** “Cintas Logistics — Accrual Re-Coding Tool”  
-- **Subtitle:** “Upload A3’s Accrual/Weekly Audit workbook. References auto-load from this folder.”  
-- Dedicated space for pre-processing raw Redwood data before re-coding  
-- Accepts `.txt`, `.csv`, or `.xlsx` files and prepares them for the main pipeline
-### 2. Accrual and Weekly Audit Files
-- **Mode Selector:** Choose between *Accrual* or *Weekly Audit* workflows  
+## 🎨 User Interface
+**Theme:**  
+- Supports **dark/light mode**  
+- Gradient header with logo and rounded design  
+- Upload buttons & radio selectors fully visible in dark mode  
+- Responsive top padding (no clipping)
+**Sections:**  
+1. Redwood Accrual Upload  
+2. Accrual vs Weekly Audit toggle  
+3. Dynamic uploaders (accepting `.xlsx`, `.csv`, `.txt`)  
+4. Auto-processing spinner  
+5. Download buttons for XLSX and CSV  
 ---
-## How the Tool Works (Step-by-Step)
-Each major process runs as a self-contained **module** for easier debugging and maintenance.
-### Step 1 — Extract Location Codes (`extract_codes.py`)
-Finds valid Cintas codes in the Consignor and Consignee columns. It converts text to lowercase, searches for codes, and fills them if missing.
+## ⚙️ Accrual Pipeline (Step-by-Step)
+### 1. Extract Location Codes (`extract_codes.py`)
+Finds valid 4-char codes (e.g., `0K35`) from Consignor and Consignee text.
 | Consignee | Extracted Code |
 |------------|----------------|
-| Cintas K35 | K35 |
-| Millennium 037Q | 037Q |
+| Cintas 0K35 Receiving Dock | 0K35 |
+| Millennium 024P Loading | 024P |
 ---
-### Step 2 — Build Combined Addresses (`address_merge.py`)
-Creates a unique matching key for each address by combining the first words of Address, City, and State. This helps match locations even when a code is missing.
+### 2. Build Combined Address (`address_merge.py`)
+Creates `Combined Address` = Address + City + State → used for matching.
 | Address | City | State | Combined Address |
 |----------|------|-------|------------------|
 | 6800 Cintas Blvd | Mason | OH | 6800MASONOH |
 ---
-### Step 3 — Cross-Reference Addresses (`address_crossref.py`)
-Compares each shipment’s Combined Address with those in **MY LOCATION TABLE.xlsx**.  
-If a match is found, the tool fills in missing Consignor or Consignee Codes (only if blank).
+### 3. Cross-Reference Addresses (`address_crossref.py`)
+Matches `Combined Address` against **MY LOCATION TABLE.xlsx** to fill missing **Consignor Code** or **Consignee Code** (only when blank).
 ---
-### Step 4 — Clean and Format Codes (`clean_codes.py`)
-Standardizes codes so they’re uppercase and correctly padded.  
-Example: `"24P"` → `"024P"`, `"ok35"` → `"0K35"`.
+### 4. Clean Codes (`clean_codes.py`)
+Standardizes capitalization and padding.  
+Examples: `"24P"` → `"024P"`, `"ok35"` → `"0K35"`.
 ---
-### Step 5 — Map the Location Types (`map_types.py`)
-Assigns each location a type based on **MY LOCATION TABLE.xlsx**.
+### 5. Map Types (`map_types.py`)
+Adds `Consignor Type` and `Consignee Type` based on the master table.
 | Type | Meaning |
 |------|----------|
-| US DC | U.S. Distribution Center |
+| US DC | United States Distribution Center |
 | CA DC | Canadian Distribution Center |
-| LC | Local Cintas Branch or Service Location |
-| MFG | Manufacturing Site |
-| FAS DC | First Aid & Safety Distribution Center |
+| LC | Local Cintas Branch / Service Location |
+| MFG | Manufacturing |
+| FAS DC | First Aid & Safety DC |
 | MM | Millennium Mats |
 | FL | Fire Location |
 | FC | Fire Charging Location |
-| Non-Cintas | Supplier or Vendor Site |
+| Non-Cintas | External Vendor |
 ---
-### Step 6 — Apply Matrix Logic (`matrix_map.py`)
-Determines who the shipment should be charged to (origin or destination) based on Consignor Type and Consignee Type.
-| Consignor Type | Consignee Type | Matrix Rule | Assigned Code |
-|----------------|----------------|--------------|----------------|
+### 6. Matrix Logic (`matrix_map.py` + `coding_matrix.py`)
+Determines which site the shipment is charged to (origin/destination/special).
+| Consignor Type | Consignee Type | Rule | Assigned Location |
+|----------------|----------------|------|-------------------|
 | US DC | LC | DESTINATION | Consignee Code |
 | LC | MFG | ORIGIN | Consignor Code |
 | MFG | CA DC | DESTINATION | Consignee Code |
 | Non-Cintas | US DC | SPECIAL | 0G59 |
 ---
-### Step 7 — Enrich with Profit & Cost Centers
-Uses the Assigned Location Code to pull matching **Profit Center** and **Cost Center** from *Coding_CintasLocation.xlsx*.
-Adds new columns:
+### 7. Enrich with Profit & Cost Centers
+Joins **Assigned Location Code** → `Coding_CintasLocation.xlsx` to pull:
 - `Profit Center EJ`
 - `Cost Center EJ`
 ---
-### Step 8 — Apply Account Number Rules
-| Condition | Assigned Account # EJ |
-|------------|-----------------------|
-| `Profit Center EJ` contains “G59” | 621000 |
-| `Consignee Code == Assigned Location Code` | 621000 |
-| *All other cases* | 621020 |
+### 8. Apply Account # EJ Logic
+| Condition | Account # EJ |
+|------------|---------------|
+| Profit Center EJ contains “G59” | 621000 |
+| Consignee Code = Assigned Code | 621000 |
+| Else | 621020 |
 ---
-### Step 9 — Accuracy Check and Deduplication
-- Removes duplicate invoices if both **Invoice Number** and **Paid Amount** exist  
-- Adds **Automation Accuracy** column:  
- - `1` = Profit Center matches original  
- - `0` = Different  
+### 9. Accuracy & De-duplication
+- Drops duplicate rows by `Invoice Number + Paid Amount`  
+- Adds column `Automation Accuracy` →  
+ `1` = Profit Center matches, `0` = Different
 ---
-### Step 10 — Export Results
-Exports clean, formatted **Excel** and **CSV** files including:  
-`Profit Center EJ`, `Cost Center EJ`, `Account # EJ`, `Automation Accuracy`, and `Assigned Location Code`.
+### 10. Export (Excel + CSV)
+Final output includes:
+| Column | Description |
+|---------|-------------|
+| Profit Center EJ | Assigned profit center |
+| Cost Center EJ | Assigned cost center |
+| Account # EJ | Account number based on logic |
+| Automation Accuracy | 1 = match / 0 = different |
+| Assigned Location Code | Final location assignment |
 ---
-## Weekly Audit Accounting Summary
+## 🧾 Weekly Audit → Accounting Summary
 When running **Weekly Audit mode**, the app:
-1. Reads both **USD** and **CAD** tabs  
-2. Calculates totals and expands GST, HST, QST, and Duty if applicable  
-3. Keeps **Account #** stored as text for Accounting uploads  
-4. Generates an Excel workbook with two sheets — one for each currency  
-Each file includes:
-- Header = negative of total Paid/Paid Amount  
-- Detail rows = grouped by Profit/Cost Center and Account #  
-- Account # column preserved as pure text  
+1. Reads both **USD** and **CAD** sheets  
+2. Calculates header and detail totals  
+3. Expands taxes (GST/PST, HST, QST, Duty)  
+4. Keeps **Account #** as text (no scientific notation)  
+5. Produces Excel with two sheets: USD & CAD  
+**Header Rule:** Negative of `Paid / Paid Amount`  
+**Detail Rule:** Uses `Total Paid Minus Duty and CAD Tax`
+Tax Mappings:
+| Tax | Default Account # |
+|-----|--------------------|
+| GST/PST | 203063 |
+| HST | 203064 |
+| QST | 203065 |
+| Duty | 621010 |
+Output filename example:  
+`Weekly Audit Batch 2345 Sep-2025-W4 – Accounting Summary (Run 2345).xlsx`
 ---
-## Maintenance & Quality Checks
-| Check | Goal |
-|--------|------|
-| Assigned Codes found | 100% |
+## 📤 Exports
+**Accrual Mode**
+- `Accrual Sep-2025.xlsx`
+- `Accrual Sep-2025.csv`
+**Weekly Audit Mode**
+- `Weekly Audit Batch {Batch} {Month-YYYY}-W{Week}.xlsx`
+- `Weekly Audit Batch {Batch} {Month-YYYY} – Accounting Summary.xlsx`
+---
+## 🧮 Quality Checks
+| Metric | Target |
+|---------|---------|
+| Assigned Location Code found | 100% |
 | Automation Accuracy | ≥ 95% |
-| Account # validation | 621000 (internal), 621020 (external) |
+| Account # Consistency | 621000 (Internal) / 621020 (External) |
 ---
-## Glossary
+## 🧰 Troubleshooting
+**“Reference load error: Missing required file”**  
+→ Ensure `MY LOCATION TABLE.xlsx`, `Coding_CintasLocation 02.06.25.xlsx`, and your `all_location_codes.xlsx` are beside `app.py`.
+**“Location Codes Excel not found … Expected one of …”**  
+→ Rename your location codes file to match one of the valid names.
+**UI header looks clipped**  
+→ The latest `theme.py` adds top padding and spacer; refresh cache or reset zoom.
+**Account # column turns scientific in Excel**  
+→ Always use the generated **.xlsx** version; it forces text formatting.
+---
+## 📘 Glossary
 | Term | Meaning |
 |------|----------|
 | **Consignor** | Shipment origin |
 | **Consignee** | Shipment destination |
-| **Loc Code** | 4-character site code (e.g., `0K35`) |
+| **Loc Code** | 4-character location ID (e.g., `0K35`) |
 | **Profit Center** | Entity that owns the cost |
-| **Cost Center** | Department responsible for the expense |
-| **Profit Center EJ, Cost Center EJ, Account # EJ** | Fields generated by the tool |
-| **Assigned Location Code** | Final posting location |
-| **Automation Accuracy** | 1 = matched, 0 = different |
+| **Cost Center** | Department incurring expense |
+| **Profit Center EJ / Cost Center EJ / Account # EJ** | Assigned by the tool |
+| **Assigned Location Code** | Final posting site |
+| **Automation Accuracy** | 1 = match, 0 = different |
 ---
-## Tech Architecture (New)
-| Module | Purpose |
-|---------|----------|
-| `theme.py` | Handles light/dark themes, responsive spacing, and modern header design. |
-| `references.py` | Loads all Cintas reference files safely. |
-| `upload_readers.py` | Reads and detects file type (.xlsx, .csv, .txt). |
-| `pipeline.py` | Runs the complete re-coding process end-to-end. |
-| `weekly_audit.py` | Builds Accounting Summary for Weekly Audit runs. |
-| `exporters.py` | Creates Excel/CSV downloads in consistent formats. |
-| `redwood_accrual.py` | Optional module for pre-processing Redwood reports. |
+## 🧱 Module Summary
+| File | Purpose |
+|------|----------|
+| `app.py` | Main Streamlit entrypoint |
+| `app2.py` | Backup version |
+| `constants.py` | Branding & variables |
+| `theme.py` | Full CSS for light/dark UI |
+| `references.py` | Loads/caches reference files |
+| `upload_readers.py` | Smart file loaders |
+| `exporters.py` | Excel/CSV output writer |
+| `pipeline.py` | Accrual data pipeline |
+| `weekly_audit.py` | Builds Accounting Summary |
+| `redwood_accrual.py` | Redwood pre-processing |
+| `extract_codes.py` | Step 1: Code extraction |
+| `address_merge.py` | Step 2: Combined Address |
+| `address_crossref.py` | Step 3: Cross-Reference |
+| `clean_codes.py` | Step 4: Normalize Codes |
+| `map_types.py` | Step 5: Assign Type |
+| `matrix_map.py` | Step 6: Matrix Logic |
+| `coding_matrix.py` | Special mapping logic |
+| `io_utils.py` | Common IO utilities |
+| `location_codes.py` | Code validation helpers |
 ---
-## Summary
-> **The Accrual Re-Coding Tool** is now a fully automated, modular system built to Cintas accounting standards.  
-> It handles 24/7 freight operations with accuracy, speed, and professional UI design — giving logistics and finance teams clean data, faster close cycles, and consistent reporting quality.
+## 🔒 Security & Privacy
+- No data leaves your local environment or Streamlit Cloud workspace.  
+- Reference files stay internal to Cintas and should not be shared externally.  
+- Always sanitize test data before public demo uploads.
+---
+## 🕒 Change Log
+**v2.0 (2025)**  
+- Modular architecture (each step split into its own file)  
+- New theme with dark/light mode  
+- Polished header and spacing  
+- Weekly Audit builder with accurate USD/CAD accounting  
+- Account # column forced as text  
+- Redwood Accrual integrated as standalone pre-processor  
+**v1.0 (2024)**  
+- Single-file Streamlit version (inline logic)
+---
+**© 2025 Cintas Corporation — Internal Logistics Automation Project**
