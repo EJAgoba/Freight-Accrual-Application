@@ -6,13 +6,14 @@
 The **Accrual Re-Coding Tool** automates how Cintas processes and codes freight files from A3 — both **Accrual** and **Weekly Audit** reports.
 It reads spreadsheets, detects missing codes, maps Profit/Cost Centers, applies Account # rules, and exports **clean, audit-ready workbooks**.  
 This process — once manual and time-consuming — now completes in seconds.
-### Core Features
-Auto-fills missing Location Codes
-Applies official Profit & Cost Center logic  
-Determines Account via business rules  
-Generates Weekly Audit Accounting Summary (USD/CAD)
-Modern, dark/light Streamlit UI with responsive layout  
-Modularized architecture (each file = single purpose)
+## 🚀 Core Features
+- Automatically fills missing **Location Codes**
+- Applies official **Profit & Cost Center** logic
+- Determines **Account # EJ** using built-in business rules
+- Generates **Weekly Audit Accounting Summary (USD/CAD)**
+- Supports **modern dark/light Streamlit UI** with responsive layout
+- Uses a **modular architecture** — each Python file serves a single purpose
+- Exports **clean, coded, audit-ready workbooks** in Excel and CSV
 ---
 
 All files are modular and must remain in the same folder as `app.py`.
