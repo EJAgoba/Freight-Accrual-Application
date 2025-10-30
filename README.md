@@ -1,6 +1,5 @@
 # Cintas Logistics — Accrual Re-Coding Tool
 ### Streamlit Application for Automated Freight Accrual Processing  
-**Version:** v2.0 (Modular, Dark/Light UI Edition)
 ---
 ## Overview
 The **Accrual Re-Coding Tool** automates how Cintas processes and codes freight files from A3 — both **Accrual** and **Weekly Audit** reports.
