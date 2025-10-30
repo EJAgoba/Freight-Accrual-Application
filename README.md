@@ -41,8 +41,8 @@ Each major process runs as a self-contained **module** for easier debugging and 
 Finds valid Cintas codes in the Consignor and Consignee columns. It converts text to lowercase, searches for codes, and fills them if missing.
 | Consignee | Extracted Code |
 |------------|----------------|
-| Cintas K35 | 0K35 |
-| Millennium 037Q | 024P |
+| Cintas K35 | K35 |
+| Millennium 037Q | 037Q |
 ---
 ### Step 2 — Build Combined Addresses (`address_merge.py`)
 Creates a unique matching key for each address by combining the first words of Address, City, and State. This helps match locations even when a code is missing.
