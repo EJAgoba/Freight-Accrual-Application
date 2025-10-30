@@ -83,7 +83,7 @@ These are auto-loaded by `references.py`. All must be in the **same folder** as 
 ---
 ## Accrual Pipeline (Step-by-Step)
 ### 1. Extract Location Codes (`extract_codes.py`)
-Finds valid 4-char codes (e.g., `0K35`) from Consignor and Consignee text.
+Finds Cintas codes (e.g., `0K35`) from Consignor and Consignee text.
 | Consignee | Extracted Code |
 |------------|----------------|
 | Cintas K35 | K35 |
