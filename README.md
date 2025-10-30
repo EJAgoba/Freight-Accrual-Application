@@ -38,7 +38,7 @@ All reference files must be stored in the same folder as **app.py** (whether loc
 ## How the Tool Works (Step-by-Step)
 Each major process runs as a self-contained **module** for easier debugging and maintenance.
 ### Step 1 — Extract Location Codes (`extract_codes.py`)
-Finds valid 4-character Cintas codes in the Consignor and Consignee columns. It converts text to lowercase, searches for codes, and fills them if missing.
+Finds valid Cintas codes in the Consignor and Consignee columns. It converts text to lowercase, searches for codes, and fills them if missing.
 | Consignee | Extracted Code |
 |------------|----------------|
 | Cintas K35 | 0K35 |
