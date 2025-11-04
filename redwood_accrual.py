@@ -48,7 +48,7 @@ REVERT_MAP = {
 
 }
 
-BOL_CANDIDATES = ["BOL Number", "BOL", "Pro/BOL", "Pro / BOL", "Pro", "Reference", "Load Number", "Shipment #", Shipment#]
+BOL_CANDIDATES = ["BOL Number", "BOL", "Pro/BOL", "Pro / BOL", "Pro", "Reference", "Load Number", "Shipment #", "Shipment#"]
 
 REQUIRED_PIPELINE_COLS = [
 
