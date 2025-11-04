@@ -10,16 +10,26 @@ LOCATION_CODES_67N = {
 LOCATION_CODES_97H = {'029G', '030G', '031G'}
 
 class MatrixMapper:
+   def _get_carrier(self, row):
+       for k in ("Carrier Name", "Carrier", "CarrierName"):
+           v = row.get(k)
+           if isinstance(v, str) and v.strip():
+               return v.strip().lower()
+       return ""
    def determine_profit_center(self, row):
-       # ------- Existing conditions -------
+       # Pull fields once
        consignor = row.get("Consignor")
        consignee = row.get("Consignee")
-       carrier = row.get("Carrier Name")
        consignee_code = row.get("Consignee Code")
        consignor_code = row.get("Consignor Code")
        origin_address = row.get("Origin Address")
        consignor_type = row.get("Consignor Type")
        consignee_type = row.get("Consignee Type")
+       carrier_lc = self._get_carrier(row)
+       # 🚨 Highest-priority override: Omnitrans → charge to DESTINATION
+       if carrier_lc == "omnitrans":
+           return consignee_code
+       # Existing conditions
        if isinstance(consignor, str) and 'averitt' in consignor.lower():
            return "0004"
        if isinstance(consignee, str) and 'coopetrajes' in consignee.lower():
@@ -28,20 +38,17 @@ class MatrixMapper:
            return "0896"
        if consignee_code in SPECIAL_CODES:
            return consignee_code
-       # ✅ New rule: If Carrier is Omnitrans, charge to DESTINATION
-       if isinstance(carrier, str) and 'omnitrans' in carrier.lower():
-           return consignee_code
-       # ✅ Condition for 67N
+       # ✅ 67N
        if (
            consignee_code in LOCATION_CODES_67N
            and isinstance(origin_address, str)
            and origin_address.startswith("570 Math")
        ):
            return "067N"
-       # ✅ Condition for 97H
+       # ✅ 97H
        if consignee_code in LOCATION_CODES_97H:
            return "097H"
-       # ------- Existing matrix logic -------
+       # Matrix logic
        key = (consignor_type, consignee_type)
        if key in SPECIAL_TYPE_MAPPINGS:
            return SPECIAL_TYPE_MAPPINGS[key]
@@ -52,4 +59,3 @@ class MatrixMapper:
            elif direction == "DESTINATION":
                return consignee_code
        return "UNKNOWN"
-
