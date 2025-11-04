@@ -14,7 +14,7 @@ class MatrixMapper:
        # ------- Existing conditions -------
        consignor = row.get("Consignor")
        consignee = row.get("Consignee")
-       carrier = row.get("Carrier")
+       carrier = row.get("Carrier Name")
        consignee_code = row.get("Consignee Code")
        consignor_code = row.get("Consignor Code")
        origin_address = row.get("Origin Address")
@@ -52,3 +52,4 @@ class MatrixMapper:
            elif direction == "DESTINATION":
                return consignee_code
        return "UNKNOWN"
+
