@@ -23,7 +23,7 @@ REVERT_MAP = {
    "Dest State Code":      "Destination State",
    "Consignor":            "Origin Facility",
 }
-BOL_CANDIDATES = ["BOL Number", "BOL", "BOLNumber", "Pro/BOL", "Pro / BOL", "Pro", "Reference", "B/L", "BL"]
+BOL_CANDIDATES = ["BOL Number", "BOL", "BOLNumber", "Pro/BOL", "Pro / BOL", "Pro", "Reference", "B/L", "BL", "Load Number", "Shipment #", "EL Primary Reference"]
 REQUIRED_PIPELINE_COLS = [
    "Consignor","Consignee","Consignor Code","Consignee Code",
    "Dest Address1","Dest City","Dest State Code",
