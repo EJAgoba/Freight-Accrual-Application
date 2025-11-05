@@ -262,5 +262,3 @@ def render_redwood_accrual_ui(load_reference_tables, pipeline_runner):
         mime="text/csv"
 
     )
-For Sale Page
- 
