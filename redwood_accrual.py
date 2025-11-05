@@ -149,19 +149,23 @@ def render_redwood_accrual_ui(
                       mime="text/csv")
 # ====================== HELPERS ======================
 def _read_any(upload) -> pd.DataFrame:
-   """Read TXT, CSV, or Excel with robust defaults."""
+   """Read TXT, CSV, or Excel safely — avoids leaving temp files open."""
+   import io, csv
+   # read the whole file into memory, so we can close it
+   file_bytes = upload.read()
+   upload.seek(0)
+   buffer = io.BytesIO(file_bytes)
    name = (upload.name or "").lower()
-   if name.endswith((".xls",".xlsx",".xlsm")):
-       return pd.read_excel(upload, dtype=str)
-   head = upload.read(4096); upload.seek(0)
+   if name.endswith((".xls", ".xlsx", ".xlsm")):
+       return pd.read_excel(buffer, dtype=str)
+   sample = file_bytes[:4096]
    try:
-       sniff = csv.Sniffer().sniff(head.decode("utf-8", errors="ignore"))
+       sniff = csv.Sniffer().sniff(sample.decode("utf-8", errors="ignore"))
        sep = sniff.delimiter
    except Exception:
-       sep = "\t" if b"\t" in head else ","
-   df = pd.read_csv(upload, sep=sep, dtype=str, engine="python", encoding="latin1", keep_default_na=False)
-   upload.seek(0)
-   return df
+       sep = "\t" if b"\t" in sample else ","
+   return pd.read_csv(io.BytesIO(file_bytes), sep=sep, dtype=str,
+                      engine="python", encoding="latin1", keep_default_na=False)
 def _find_first_col(df: pd.DataFrame, candidates: Iterable[str]) -> str | None:
    for c in candidates:
        if c in df.columns: return c
