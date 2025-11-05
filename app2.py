@@ -52,6 +52,15 @@ header_html = f"""
 
 st.markdown(header_html, unsafe_allow_html=True)
 
+# --- Reload reference tables button ---
+
+if st.button("🔁 Reload reference tables"):
+
+    st.cache_data.clear()
+
+    st.success("✅ Reference cache cleared. Please re-run your file.")
+ 
+
 
 # ================= Cached references =================
 
@@ -285,6 +294,7 @@ if file_kind == "Weekly Audit":
         except Exception as e:
 
             st.error(f"Weekly Audit accounting summary failed: {e}")
+
 
 
 
