@@ -28,6 +28,28 @@ from weekly_audit import WeeklyAuditBuilder
 
 from exporters import Exporter
 
+import io, hashlib
+def _file_hash(upload) -> tuple[str, bytes]:
+   """Read uploaded file once and return (hash, bytes)."""
+   data = upload.read()
+   upload.seek(0)
+   return hashlib.sha1(data).hexdigest(), data
+@st.cache_data(show_spinner=False, ttl=3600, max_entries=10)
+def read_any_cached(name: str, data: bytes) -> pd.DataFrame:
+   """Cached universal file reader to reduce reprocessing."""
+   buf = io.BytesIO(data)
+   name = name.lower()
+   if name.endswith((".xls", ".xlsx", ".xlsm")):
+       return pd.read_excel(buf, dtype=str, engine="openpyxl")
+   import csv
+   sample = data[:4096]
+   try:
+       sniff = csv.Sniffer().sniff(sample.decode("utf-8", errors="ignore"))
+       sep = sniff.delimiter
+   except Exception:
+       sep = "\t" if b"\t" in sample else ","
+   return pd.read_csv(io.BytesIO(data), sep=sep, dtype=str, engine="python", encoding="latin1", keep_default_na=False)
+
 
 # ================= Page / Theme (light only) =================
 
@@ -284,6 +306,7 @@ if file_kind == "Weekly Audit":
         except Exception as e:
 
             st.error(f"Weekly Audit accounting summary failed: {e}")
+
 
 
 
