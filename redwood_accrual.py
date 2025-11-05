@@ -26,7 +26,7 @@ REVERT_MAP = {
    "Consignor":            "Origin Facility",
 }
 # Candidate BOL column names (case-sensitive first, then case-insensitive)
-BOL_CANDIDATES = ["BOL Number", "BOL", "BOLNumber", "Pro/BOL", "Pro / BOL", "Pro", "Reference", "B/L", "BL"]
+BOL_CANDIDATES = ["Shipment #", "Shipment#", "Load Number"]
 # Columns the pipeline expects; we’ll create blanks if missing
 REQUIRED_PIPELINE_COLS = [
    "Consignor","Consignee","Consignor Code","Consignee Code",
@@ -35,10 +35,7 @@ REQUIRED_PIPELINE_COLS = [
    "Profit Center","Cost Center","Account #",
 ]
 # Spend preference order for Pivot
-SPEND_CANDIDATES = [
-   "Total Paid Minus Duty and CAD Tax",
-   "Paid Amount","Paid","Amount","Total","Spend","Charge","Charges"
-]
+SPEND_CANDIDATES = ["Spend"]
 # ====================== PUBLIC UI ======================
 def render_redwood_accrual_ui(
    load_reference_tables: Callable[[], tuple[list[str], pd.DataFrame, pd.DataFrame]],
