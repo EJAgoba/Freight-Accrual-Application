@@ -1,7 +1,7 @@
 from pathlib import Path
 # === Reference file names (next to app.py) ===
 CINTAS_LOCATION_TABLE_FILE = "MY LOCATION TABLE.xlsx"
-COMPLETE_LOCATION_TABLE_FILE = "Coding_CintasLocation 02.06.25.xlsx"
+COMPLETE_LOCATION_TABLE_FILE = "Coding_CintasLocation 11.05.25.xlsx"
 LOCATION_CODES_CANDIDATES = [
    "Location Codes.xlsx",
    "LOCATION_CODES.xlsx",
