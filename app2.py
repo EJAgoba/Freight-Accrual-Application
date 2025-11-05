@@ -1,4 +1,6 @@
 # app.py
+import os
+os.environ["STREAMLIT_SERVER_FILE_WATCHER_TYPE"] = "none"
 
 import calendar
 
@@ -306,6 +308,7 @@ if file_kind == "Weekly Audit":
         except Exception as e:
 
             st.error(f"Weekly Audit accounting summary failed: {e}")
+
 
 
 
