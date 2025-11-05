@@ -1,44 +1,72 @@
+# references.py
+
 from pathlib import Path
+
+import hashlib
+
 import pandas as pd
-from typing import Tuple, List
-from io_utils import FileIO
-from constants import (
-   CINTAS_LOCATION_TABLE_FILE, COMPLETE_LOCATION_TABLE_FILE, LOCATION_CODES_CANDIDATES
-)
+
+from constants import CINTAS_LOCATION_TABLE_FILE, COMPLETE_LOCATION_TABLE_FILE
+
+def _canon_code(s: pd.Series) -> pd.Series:
+
+    """Normalize codes (remove spaces, uppercase, strip)"""
+
+    return (s.astype(str)
+
+              .str.strip()
+
+              .str.upper()
+
+              .str.replace(r"\s+", "", regex=True))
+
+def _file_hash(p: Path) -> str:
+
+    """Generate hash so cache refreshes when Excel file changes"""
+
+    return hashlib.sha1(p.read_bytes()).hexdigest()
+
 class ReferenceLoader:
-   """Loads location codes, MY LOCATION TABLE, and the complete coding table."""
-   def load(self) -> Tuple[List[str], pd.DataFrame, pd.DataFrame]:
-       codes_path = self._find_codes_path()
-       df_codes = pd.read_excel(codes_path)
-       possible_cols = ["Codes", "Code", "Loc Code", "Loc_Code", "Location Code"]
-       code_col = next((c for c in possible_cols if c in df_codes.columns), None)
-       if code_col is None:
-           raise ValueError(
-               f"'{codes_path.name}' must contain one of these columns: {possible_cols}. "
-               f"Found: {list(df_codes.columns)}"
-           )
-       location_codes = (
-           df_codes[code_col]
-           .dropna()
-           .astype(str)
-           .str.strip()
-           .str.upper()
-           .tolist()
-       )
-       cintas_location_table = FileIO.read_excel_here(CINTAS_LOCATION_TABLE_FILE)
-       complete_location_table = FileIO.read_excel_here(COMPLETE_LOCATION_TABLE_FILE)
-       return location_codes, cintas_location_table, complete_location_table
-   @staticmethod
-   def _find_codes_path() -> Path:
-       codes_path = None
-       for fname in LOCATION_CODES_CANDIDATES:
-           p = Path(__file__).with_name(fname)
-           if p.exists():
-               codes_path = p
-               break
-       if codes_path is None:
-           raise FileNotFoundError(
-               "Location Codes Excel not found next to app.py. "
-               f"Expected one of: {', '.join(LOCATION_CODES_CANDIDATES)}."
-           )
-       return codes_path
+
+    def load(self):
+
+        here = Path(__file__).parent
+
+        loc_path  = here / CINTAS_LOCATION_TABLE_FILE
+
+        comp_path = here / COMPLETE_LOCATION_TABLE_FILE
+
+        # hash for Streamlit cache invalidation
+
+        _ = (_file_hash(loc_path), _file_hash(comp_path))
+
+        # --- Read as text to keep leading zeros like '061R' ---
+
+        loc_tbl  = pd.read_excel(loc_path, dtype=str)
+
+        comp_tbl = pd.read_excel(comp_path, dtype=str)
+
+        # --- Clean up both tables ---
+
+        if "Loc Code" in loc_tbl.columns:
+
+            loc_tbl["Loc Code"] = _canon_code(loc_tbl["Loc Code"])
+
+        for c in ["Prof_Cntr", "Cost_Cntr", "Profit Center", "Cost Center"]:
+
+            if c in loc_tbl.columns:
+
+                loc_tbl[c] = loc_tbl[c].astype(str).str.strip().str.upper()
+
+        if "Loc Code" in comp_tbl.columns:
+
+            comp_tbl["Loc Code"] = _canon_code(comp_tbl["Loc Code"])
+
+            comp_tbl = comp_tbl.drop_duplicates(subset=["Loc Code"])
+
+        # location_codes is optional; can return empty if unused
+
+        location_codes = []
+
+        return location_codes, loc_tbl, comp_tbl
+ 
