@@ -66,16 +66,7 @@ def load_reference_tables():
 
 # ================= Redwood Accrual =================
 
-st.header("Redwood Accrual")
-with st.form("redwood_form", clear_on_submit=False):
-   st.markdown("Upload both files below to run Redwood Accrual:")
-   a3_file = st.file_uploader("Upload A3 file", type=["txt","csv","xls","xlsx","xlsm"], key="rw_a3")
-   redwood_file = st.file_uploader("Upload Redwood file", type=["txt","csv","xls","xlsx","xlsm"], key="rw_rw")
-   run_redwood = st.form_submit_button("Run Redwood Accrual")
-# 🔒 This ensures Streamlit stops here until user clicks “Run Redwood Accrual”
-if not run_redwood:
-   st.stop()
-# When button is clicked, run your Redwood Accrual logic
+
 render_redwood_accrual_ui(load_reference_tables, PipelineRunner().run)
 # ================= Main: Accrual vs Weekly Audit =================
 
@@ -294,6 +285,7 @@ if file_kind == "Weekly Audit":
         except Exception as e:
 
             st.error(f"Weekly Audit accounting summary failed: {e}")
+
 
 
 
