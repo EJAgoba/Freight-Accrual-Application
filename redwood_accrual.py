@@ -57,7 +57,7 @@ def render_redwood_accrual_ui(
    if a3_file is None or redwood_file is None:
        st.error("Please upload both the A3 file and the Redwood file.")
        return
-   # ---------- Read both files safely (no leaking file handles) ----------
+   # ---------- Read both files safely ----------
    try:
        a3_df = _read_any(a3_file)
        rw_df = _read_any(redwood_file)
@@ -72,29 +72,28 @@ def render_redwood_accrual_ui(
        st.error("Could not find a BOL / Pro-BOL column in one or both files.")
        return
    # ---------- STRICT requirement: KEEP ONLY Redwood BOLs NOT IN A3 ----------
-   a3_df["__BOL_NORM__"] = _normalize_bol_series(a3_df[a3_bol])
-   rw_df["__BOL_NORM__"] = _normalize_bol_series(rw_df[rw_bol])
-   a3_bol_set = set(a3_df["__BOL_NORM__"].dropna().tolist())
-   filtered = rw_df[~rw_df["__BOL_NORM__"].isin(a3_bol_set)].copy()
+   filtered = _anti_join_by_bol(a3_df, a3_bol, rw_df, rw_bol)
    st.success(f"Filtered Redwood rows not in A3 by normalized BOL: **{len(filtered):,}**")
+   st.caption(f"After anti-join: {len(filtered):,} rows")
    if filtered.empty:
        st.warning("Nothing to process — all Redwood BOLs appear in A3 (after normalization).")
        return
+   # ---------- Tag immutable row id BEFORE any pipeline work ----------
+   filtered = filtered.reset_index(drop=True).copy()
+   filtered["__ROW_ID__"] = filtered.index.astype("int64")
    # ---------- Normalize headers for your pipeline ----------
    filtered = _normalize_headers(filtered, HEADER_MAP)
    for c in REQUIRED_PIPELINE_COLS:
        if c not in filtered.columns:
            filtered[c] = ""
-   # Stabilize identity to guarantee one output per original Redwood row
-   filtered = filtered.reset_index(drop=True).copy()
-   filtered["__ROW_ID__"] = filtered.index.astype(int)
    # ---------- Load references ----------
    try:
        location_codes, my_location_table, complete_loc_tbl = load_reference_tables()
    except Exception as e:
        st.error(f"Reference load error: {e}")
        return
-   # Make reference tables unique on keys commonly used in merges to prevent fan-out
+   # ---------- Make reference tables unique on likely join keys ----------
+   # Adjust these if your pipeline uses different join keys.
    my_location_table  = _dedupe_by_keys(my_location_table,  ["Loc Code", "Combined Address"])
    complete_loc_tbl   = _dedupe_by_keys(complete_loc_tbl,   ["Loc Code"])
    # ---------- Run your pipeline ----------
@@ -104,14 +103,17 @@ def render_redwood_accrual_ui(
        except Exception as e:
            st.error(f"Pipeline error: {e}")
            return
+   st.caption(f"After pipeline (pre-collapse): {len(result):,} rows")
+   # ---------- Ensure __ROW_ID__ survived ----------
+   if "__ROW_ID__" not in result.columns:
+       st.error(
+           "The pipeline removed '__ROW_ID__'. "
+           "Please ensure your merges/selects carry through this column so we can guarantee 1:1 output."
+       )
+       return
    # ---------- Collapse any fan-out back to 1 row per Redwood shipment ----------
-   before = len(result)
-   result = (result.sort_values("__ROW_ID__")
-                   .drop_duplicates(subset="__ROW_ID__", keep="first")
-                   .drop(columns=["__ROW_ID__"], errors="ignore")
-                   .reset_index(drop=True))
-   if len(result) != before:
-       st.caption(f"Collapsed merge fan-out: {before:,} → {len(result):,} rows (one per Redwood row)")
+   result = _collapse_to_one_row(result, key="__ROW_ID__")
+   st.caption(f"After collapse: {len(result):,} rows (should equal filtered count)")
    # ---------- GL from EJ columns ----------
    for ej in ["Profit Center EJ","Cost Center EJ","Account # EJ"]:
        if ej not in result.columns:
@@ -175,12 +177,25 @@ def _normalize_bol_series(s: pd.Series) -> pd.Series:
        y = x.lstrip("0")
        return y if y else "0"
    return t.map(_lz)
+def _anti_join_by_bol(a3_df: pd.DataFrame, a3_bol: str,
+                     rw_df: pd.DataFrame, rw_bol: str) -> pd.DataFrame:
+   a3_df = a3_df.copy()
+   rw_df = rw_df.copy()
+   a3_df["__BOL_NORM__"] = _normalize_bol_series(a3_df[a3_bol])
+   rw_df["__BOL_NORM__"] = _normalize_bol_series(rw_df[rw_bol])
+   a3_keys = a3_df[["__BOL_NORM__"]].drop_duplicates()
+   out = (rw_df
+          .merge(a3_keys, on="__BOL_NORM__", how="left", indicator=True)
+          .loc[lambda d: d["_merge"] == "left_only"]
+          .drop(columns=["_merge"]))
+   return out.reset_index(drop=True)
 def _normalize_headers(df: pd.DataFrame, mapping: dict[str,str]) -> pd.DataFrame:
    df = df.copy()
    lower_to_real = {c.lower(): c for c in df.columns}
    for left, right in mapping.items():
        src = lower_to_real.get(left)
-       if not src: continue
+       if not src:
+           continue
        if right in df.columns:
            mask = df[right].isna() | (df[right].astype(str).str.strip() == "")
            df.loc[mask, right] = df.loc[mask, src]
@@ -193,6 +208,18 @@ def _revert_headers(df: pd.DataFrame, rev: dict[str,str]) -> pd.DataFrame:
 def _dedupe_by_keys(df: pd.DataFrame, keys: list[str]) -> pd.DataFrame:
    keys = [k for k in keys if k in df.columns]
    return df.drop_duplicates(subset=keys).copy() if keys else df.copy()
+def _first_nonnull(s: pd.Series):
+   # deterministic, favors the first non-null in row order
+   m = s.first_valid_index()
+   return s[m] if m is not None else None
+def _collapse_to_one_row(df: pd.DataFrame, key: str) -> pd.DataFrame:
+   if key not in df.columns:
+       return df.copy()
+   out = (df.groupby(key, as_index=False)
+            .agg(_first_nonnull)
+            .drop(columns=[key], errors="ignore")
+            .reset_index(drop=True))
+   return out
 def _pivot_gl_sum(df: pd.DataFrame, spend_col: str) -> pd.DataFrame:
    tmp = df.copy()
    tmp["_Spend_"] = pd.to_numeric(
