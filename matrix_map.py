@@ -31,7 +31,7 @@ class MatrixMapper:
            if isinstance(v, str) and v.strip():
                return v.strip().lower()
        return ""
-   def determine_profit_center(self, row: pd.Series) -> str | pd.NA:
+   def determine_profit_center(self, row: pd.Series):
        # --- Pull & normalize fields ---
        consignor = _norm(row.get("Consignor"))
        consignee = _norm(row.get("Consignee"))
@@ -99,3 +99,4 @@ def audit_missing_type_pairs(df: pd.DataFrame) -> pd.DataFrame:
        .reset_index(name="count")
        .sort_values("count", ascending=False)
    )
+
