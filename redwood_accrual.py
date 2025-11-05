@@ -118,7 +118,6 @@ def render_redwood_accrual_ui(
        if ej not in result.columns:
            result[ej] = ""
    result["GL"] = (
-       result["Profit Center EJ"].astype(str).str.strip() + "." +
        result["Cost Center EJ"].astype(str).str.strip() + "." +
        result["Account # EJ"].astype(str).str.strip()
    ).str.strip(".")
