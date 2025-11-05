@@ -26,7 +26,7 @@ REVERT_MAP = {
    "Consignor":            "Origin Facility",
 }
 # Candidate BOL column names (case-sensitive first, then case-insensitive)
-BOL_CANDIDATES = ["Shipment #", "Shipment#", "Load Number"]
+BOL_CANDIDATES = ["BOL Number", "BOL", "BOLNumber", "Pro/BOL", "Pro / BOL", "Pro", "Reference", "B/L", "BL"]
 # Columns the pipeline expects; we’ll create blanks if missing
 REQUIRED_PIPELINE_COLS = [
    "Consignor","Consignee","Consignor Code","Consignee Code",
@@ -35,7 +35,10 @@ REQUIRED_PIPELINE_COLS = [
    "Profit Center","Cost Center","Account #",
 ]
 # Spend preference order for Pivot
-SPEND_CANDIDATES = ["Spend"]
+SPEND_CANDIDATES = [
+   "Total Paid Minus Duty and CAD Tax",
+   "Paid Amount","Paid","Amount","Total","Spend","Charge","Charges"
+]
 # ====================== PUBLIC UI ======================
 def render_redwood_accrual_ui(
    load_reference_tables: Callable[[], tuple[list[str], pd.DataFrame, pd.DataFrame]],
@@ -108,29 +111,32 @@ def render_redwood_accrual_ui(
            "Please ensure your merges/selects carry through this column so we can guarantee 1:1 output."
        )
        return
-   # ---------- Collapse any fan-out back to 1 row per Redwood shipment ----------
-   result = _collapse_to_one_row(result, key="__ROW_ID__")
-   st.caption(f"After collapse: {len(result):,} rows (should equal filtered count)")
+   # ---------- HARD guarantee: final == filtered rowset & order ----------
+   final = _enforce_exact_rowset(filtered, result, key="__ROW_ID__")
+   st.caption(f"After enforce_exact_rowset: {len(final):,} rows (must equal filtered count {len(filtered):,})")
+   if len(final) != len(filtered):
+       st.error(f"Row count mismatch after enforcement: filtered={len(filtered):,}, final={len(final):,}")
+       return
    # ---------- GL from EJ columns ----------
    for ej in ["Profit Center EJ","Cost Center EJ","Account # EJ"]:
-       if ej not in result.columns:
-           result[ej] = ""
-   result["GL"] = (
-       result["Profit Center EJ"].astype(str).str.strip() + "." +
-       result["Cost Center EJ"].astype(str).str.strip() + "." +
-       result["Account # EJ"].astype(str).str.strip()
+       if ej not in final.columns:
+           final[ej] = ""
+   final["GL"] = (
+       final["Profit Center EJ"].astype(str).str.strip() + "." +
+       final["Cost Center EJ"].astype(str).str.strip() + "." +
+       final["Account # EJ"].astype(str).str.strip()
    ).str.strip(".")
    # ---------- Pivot: GL + Sum of Spend ----------
-   spend_col = next((c for c in SPEND_CANDIDATES if c in result.columns), None)
+   spend_col = next((c for c in SPEND_CANDIDATES if c in final.columns), None)
    if spend_col:
-       pivot = _pivot_gl_sum(result, spend_col)
+       pivot = _pivot_gl_sum(final, spend_col)
        st.caption(f"Pivot uses spend column: **{spend_col}**")
    else:
        pivot = pd.DataFrame(columns=["GL","Sum of Spend"])
        st.warning("No spend column found for Pivot Summary; sheet will be empty.")
    # ---------- Revert headers for export ----------
-   export_df = _revert_headers(result, REVERT_MAP)
-   st.success(f"Done! Redwood Accrual processed **{len(export_df):,}** rows.")
+   export_df = _revert_headers(final, REVERT_MAP)
+   st.success(f"Done! Redwood Accrual processed **{len(export_df):,}** rows (exact match to filtered).")
    # ---------- Export ----------
    xls_bytes = _to_multi_sheet_xlsx({"Redwood Accrual": export_df, "Pivot Summary": pivot})
    st.download_button("⬇️ Download Redwood Accrual (Excel w/ Pivot Summary)",
@@ -213,11 +219,31 @@ def _collapse_to_one_row(df: pd.DataFrame, key: str) -> pd.DataFrame:
    if key not in df.columns:
        return df.copy()
    out = (df.groupby(key, as_index=False)
-            .agg(_first_nonnull)
-            .drop(columns=[key], errors="ignore")
-            .reset_index(drop=True))
+            .agg(_first_nonnull))
    return out
+def _enforce_exact_rowset(filtered: pd.DataFrame, result: pd.DataFrame, key: str) -> pd.DataFrame:
+   """
+   Guarantee final == filtered:
+   1) Collapse result to one row per key
+   2) Reindex to EXACTLY the filtered rowset & order
+   3) Union columns and backfill from filtered if pipeline missed anything
+   """
+   if key not in filtered.columns:
+       raise ValueError(f"`filtered` missing key column {key}")
+   if key not in result.columns:
+       raise ValueError(f"`result` missing key column {key}")
+   collapsed = _collapse_to_one_row(result, key=key).set_index(key)
+   base = filtered.set_index(key)
+   # Reindex to filtered rowset & order
+   aligned = collapsed.reindex(base.index)
+   # Union columns, prefer pipeline; backfill with filtered values
+   all_cols = list(set(aligned.columns) | set(base.columns))
+   aligned = aligned.reindex(columns=all_cols)
+   final = aligned.combine_first(base)
+   return final.reset_index()
 def _pivot_gl_sum(df: pd.DataFrame, spend_col: str) -> pd.DataFrame:
+   if not spend_col:
+       return pd.DataFrame(columns=["GL","Sum of Spend"])
    tmp = df.copy()
    tmp["_Spend_"] = pd.to_numeric(
        tmp[spend_col].astype(str).str.replace("(", "-", regex=False).str.replace(")", "", regex=False),
