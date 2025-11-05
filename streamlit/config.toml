@@ -1,1 +1,13 @@
 
+OSError: [Errno 24] Too many open filesException in callback BaseAsyncIOLoop._handle_events()handle: <Handle BaseAsyncIOLoop._handle_events()>Traceback (most recent call last):  File "/usr/local/lib/python3.13/asyncio/events.py", line 89, in _run    self._context.run(self._callback, *self._args)    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  File "/home/adminuser/venv/lib/python3.13/site-packages/tornado/platform/asyncio.py", line 208, in _handle_events    handler_func(fileobj, events)    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^  File "/home/adminuser/venv/lib/python3.13/site-packages/tornado/netutil.py", line 273, in accept_handler    connection, address = sock.accept()                          ~~~~~~~~~~~^^  File "/usr/local/lib/python3.13/socket.py", line 295, in accept    fd, addr = self._accept()               ~~~~~~~~~~~~^^OSError: [Errno 24] Too many open files
+ 
+[server]
+
+fileWatcherType = "none"
+
+maxUploadSize = 500
+
+headless = true
+
+enableStaticServing = false
+ 
