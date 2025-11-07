@@ -4,13 +4,14 @@ from coding_matrix import SPECIAL_TYPE_MAPPINGS, Coding_Matrix
 # --- Static Code Sets ---
 SPECIAL_CODES = {'0K35', '024P', '067N'}
 # Location codes for 67N
-LOCATION_CODES_67N = {
-   '029N', '030N', '031N', '032N', '033N', '034N', '039N', '042N', '045N', '046N', '048N',
-   '055N', '060N', '0827', '0839', '0847', '0850', '0851', '0857', '0881', '0882', '0884',
-   '0885', '0886', '0888', '0889', '0903', '0951', '0W17'
-}
-# Location codes for 97H
-LOCATION_CODES_97H = {'029G', '030G', '031G'}
+# LOCATION_CODES_67N = {
+#    '029N', '030N', '031N', '032N', '033N', '034N', '039N', '042N', '045N', '046N', '048N',
+#    '055N', '060N', '0827', '0839', '0847', '0850', '0851', '0857', '0881', '0882', '0884',
+#    '0885', '0886', '0888', '0889', '0903', '0951', '0W17'
+# }
+# #Add 897 logic 
+# # Location codes for 97H
+# LOCATION_CODES_97H = {'029G', '030G', '031G'}
 
 # --- Utility: normalize text ---
 def _norm(x: object) -> str:
@@ -52,14 +53,14 @@ class MatrixMapper:
        if consignee_code in SPECIAL_CODES:
            return consignee_code
        # --- 3️⃣ 67N rule ---
-       if (
-           consignee_code in LOCATION_CODES_67N
-           and origin_address.startswith("570 MATH")
-       ):
-           return "067N"
+       # if (
+       #     consignee_code in LOCATION_CODES_67N
+       #     and origin_address.startswith("570 MATH")
+       # ):
+       #     return "067N"
        # --- 4️⃣ 97H rule ---
-       if consignee_code in LOCATION_CODES_97H:
-           return "097H"
+       # if consignee_code in LOCATION_CODES_97H:
+       #     return "097H"
        # --- 5️⃣ Matrix-driven logic ---
        key = (consignor_type, consignee_type)
        key_norm = (_norm(consignor_type), _norm(consignee_type))
@@ -99,4 +100,5 @@ def audit_missing_type_pairs(df: pd.DataFrame) -> pd.DataFrame:
        .reset_index(name="count")
        .sort_values("count", ascending=False)
    )
+
 
