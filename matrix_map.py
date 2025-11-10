@@ -42,6 +42,10 @@ class MatrixMapper:
        consignor_type = _norm(row.get("Consignor Type"))
        consignee_type = _norm(row.get("Consignee Type"))
        carrier_lc = self._get_carrier(row)
+
+       consignor_lower = consignor.lower()
+       if "matheson" in consignor_lower and "fs" in consignor_lower:
+           return "067N"
        # --- 1️⃣ Carrier override: Omnitrans = always charge to DESTINATION ---
        if carrier_lc == "omnitrans":
            return consignee_code or pd.NA
@@ -103,6 +107,7 @@ def audit_missing_type_pairs(df: pd.DataFrame) -> pd.DataFrame:
        .reset_index(name="count")
        .sort_values("count", ascending=False)
    )
+
 
 
 
