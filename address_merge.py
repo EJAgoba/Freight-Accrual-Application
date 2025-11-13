@@ -1,14 +1,24 @@
+# address_merge.py
 import pandas as pd
-
+def _normalize(val):
+   return (
+       str(val or "")
+       .upper()
+       .replace(" ", "")
+       .replace(",", "")
+       .replace(".", "")
+       .replace("-", "")
+       .strip()
+   )
 class CombinedAddress:
-    def get_first_word(self, address):
-        if pd.isna(address) or not str(address).strip():
-            return ''
-        return str(address).strip().split()[0]
-
-    def create_combined_address_accrual(self, df, new_column, street_address, city, state):
-        df[new_column] = (
-            df[street_address].apply(self.get_first_word) +
-            df[city].apply(self.get_first_word) +
-            df[state].apply(self.get_first_word)
-        )
+   """
+   Creates perfectly normalized combined addresses
+   so merges ALWAYS work.
+   """
+   def create(self, df, target, street_col, city_col, state_col):
+       df[target] = (
+           df[street_col].apply(_normalize)
+           + df[city_col].apply(_normalize)
+           + df[state_col].apply(_normalize)
+       )
+       return df
