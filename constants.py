@@ -34,3 +34,4 @@ APP_HEADER_HTML = """
 <div class="app-title">Accrual Re-Coding Tool</div>
 <div class="app-subtitle">Upload A3’s Accrual/Weekly Audit workbook. References auto-load from this folder.</div>
 </div>
+"""
