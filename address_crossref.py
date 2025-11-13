@@ -1,62 +1,65 @@
+# address_crossref.py
+from __future__ import annotations
 import pandas as pd
 
 class Merger:
-    def merge(self, df, locations, column):
-        df.columns = df.columns.str.strip()
-        locations.columns = locations.columns.str.strip()
-
-        # Step 1: Filter rows with missing or N.A. values
-        mask = (
-            df[column].isna() |
-            (df[column].astype(str).str.strip() == '') |
-            (df[column].astype(str).str.upper().str.strip() == 'N.A.')
-        )
-        filtered_df = df[mask].copy()
-        print(f"→ Found {filtered_df.shape[0]} rows with missing '{column}'")
-
-        # Step 2: Save original index so we can write back later
-        filtered_df['original_index'] = filtered_df.index
-
-        # Step 3: Join on the corresponding Combined Address column
-        # Step 3: Join on the corresponding Combined Address column
-        if 'Consignor' in column:
-            join_col = 'Consignor Combined Address'
-        elif 'Consignee' in column:
-            join_col = 'Consignee Combined Address'
-        else:
-            raise ValueError("Unknown column type for address matching")
-
-        # Keep only first match from locations_df to avoid many-to-many merge
-        locations_df_unique = locations.drop_duplicates(subset='Combined Address', keep='first')
-
-        merged = pd.merge(
-            left=filtered_df,
-            right=locations_df_unique[['Loc Code', 'Combined Address']],
-            left_on=join_col,
-            right_on='Combined Address',
-            how='inner'
-        )
-
-        # # Infer the matching Combined Address column dynamically
-        # if 'Consignor' in column:
-        #     join_col = 'Consignor Combined Address'
-        # elif 'Consignee' in column:
-        #     join_col = 'Consignee Combined Address'
-        # else:
-        #     raise ValueError("Unknown column type for address matching")
-
-        # merged = pd.merge(
-        #     left=filtered_df,
-        #     right=locations[['Loc Code', 'Combined Address']],
-        #     left_on=join_col,
-        #     right_on='Combined Address',
-        #     how='inner'
-        # )
-        print(f"→ Merge produced {merged.shape[0]} matched rows for '{column}'")
-
-        # Step 4: Write Loc Code back into the original df[column]
-        for _, row in merged.iterrows():
-            df.at[row['original_index'], column] = row['Loc Code']
-
-        return df
-
+   """
+   Address-based lookup that ONLY fills missing codes.
+   - Uses Consignor/Consignee Combined Address to look up Loc Code
+     from the Cintas location table.
+   - If Consignor Code / Consignee Code is already populated
+     (from text extract or Org/Dest), it will NOT be overwritten.
+   """
+   @staticmethod
+   def _addr_col_for_code(code_col: str) -> str:
+       """Map target code column → combined address column."""
+       col = code_col.strip().lower()
+       if "consignor" in col:
+           return "Consignor Combined Address"
+       if "consignee" in col:
+           return "Consignee Combined Address"
+       # Fails loudly if someone passes an unexpected column name
+       raise ValueError(f"Unknown code column for address merge: {code_col!r}")
+   def merge(
+       self,
+       accrual_df: pd.DataFrame,
+       cintas_location_table: pd.DataFrame,
+       code_col: str,
+   ) -> pd.DataFrame:
+       """
+       Fill `code_col` (e.g. 'Consignor Code' / 'Consignee Code')
+       using address cross-reference, but **only where that code is blank**.
+       """
+       if code_col not in accrual_df.columns:
+           # nothing to do
+           return accrual_df
+       addr_col = self._addr_col_for_code(code_col)
+       if addr_col not in accrual_df.columns:
+           # no combined address → nothing to cross-ref
+           return accrual_df
+       # --- build a clean lookup table: Combined Address → Loc Code ---
+       lut = cintas_location_table[["Combined Address", "Loc Code"]].copy()
+       lut = lut.dropna(subset=["Combined Address", "Loc Code"])
+       # If multiple locations share an address, keep the first. We are
+       # only using this when we *have no code at all*.
+       lut = lut.drop_duplicates(subset=["Combined Address"])
+       # --- merge in Loc Code by address ---
+       merged = accrual_df.merge(
+           lut,
+           how="left",
+           left_on=addr_col,
+           right_on="Combined Address",
+           suffixes=("", "_addr"),
+       )
+       # --- only fill blanks; NEVER overwrite existing codes ---
+       code_is_blank = (
+           merged[code_col].isna()
+           | (merged[code_col].astype(str).str.strip() == "")
+       )
+       merged.loc[code_is_blank, code_col] = merged.loc[code_is_blank, "Loc Code"]
+       # --- clean up helper columns ---
+       # 'Combined Address' is your original; 'Combined Address_addr' may appear from lut.
+       for col in ["Loc Code", "Combined Address_addr"]:
+           if col in merged.columns:
+               merged = merged.drop(columns=[col])
+       return merged
