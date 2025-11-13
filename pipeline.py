@@ -145,17 +145,17 @@ class PipelineRunner:
 
         # ===============================================================
 
-        if "Origin Type Code" in accrual_df.columns:
+        if "Org Type Code" in accrual_df.columns:
 
-            mask = accrual_df["Origin Type Code"].notna() & (
+            mask = accrual_df["Org Type Code"].notna() & (
 
-                accrual_df["Origin Type Code"].astype(str).str.strip() != ""
+                accrual_df["Org Type Code"].astype(str).str.strip() != ""
 
             )
 
             accrual_df.loc[mask, "Consignor Code"] = (
 
-                accrual_df.loc[mask, "Origin Type Code"].astype(str).str.upper()
+                accrual_df.loc[mask, "Org Type Code"].astype(str).str.upper()
 
             )
 
