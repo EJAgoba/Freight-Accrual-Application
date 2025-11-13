@@ -18,7 +18,7 @@ class Merger:
        if code_str == "" or type_str == "" or "THIRD" in type_str:
            return True
        return False
-   def merge_by_address(self, accrual_df: pd.DataFrame, cintas_loc_df: pd.DataFrame) -> pd.DataFrame:
+   def merge(self, accrual_df: pd.DataFrame, cintas_loc_df: pd.DataFrame) -> pd.DataFrame:
        """
        Fills Consignor/Consignee Code using Combined Address → Loc Code mapping.
        """
@@ -53,3 +53,4 @@ class Merger:
                    axis=1,
                )
        return accrual_df
+
