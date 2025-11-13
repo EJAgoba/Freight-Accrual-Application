@@ -45,6 +45,9 @@ class PipelineRunner:
        extractor.prefill_from_loc_columns(accrual_df, location_codes)
        extractor.extract1(accrual_df, 'Consignor', 'Consignor Code', location_codes, only_null=True)
        extractor.extract1(accrual_df, 'Consignee', 'Consignee Code', location_codes, only_null=True)
+       # 🔒 SAVE what extract.py produced so it can’t be overwritten
+       accrual_df['Consignor Code_extract'] = accrual_df['Consignor Code']
+       accrual_df['Consignee Code_extract'] = accrual_df['Consignee Code']
        # --- Combined Address ---
        combined_address = CombinedAddress()
        combined_address.create_combined_address_accrual(
@@ -57,12 +60,21 @@ class PipelineRunner:
            accrual_df, 'Consignor Combined Address', 'Origin Addresss', 'Origin City', 'Origin State Code'
        )
        cintas_location_table['Combined Address'] = cintas_location_table['Combined Address'].astype(str).str.upper()
-       accrual_df['Consignee Combined Address']  = accrual_df['Consignee Combined Address'].astype(str).str.upper()
-       accrual_df['Consignor Combined Address']  = accrual_df['Consignor Combined Address'].astype(str).str.upper()
+       accrual_df['Consignee Combined Address'] = accrual_df['Consignee Combined Address'].astype(str).str.upper()
+       accrual_df['Consignor Combined Address'] = accrual_df['Consignor Combined Address'].astype(str).str.upper()
        # --- Cross reference the combined address ---
        merger = Merger()
        accrual_df = merger.merge(accrual_df, cintas_location_table, 'Consignor Code')
        accrual_df = merger.merge(accrual_df, cintas_location_table, 'Consignee Code')
+       # 🔙 RESTORE extractor results wherever they exist (non-null / non-empty)
+       for col in ['Consignor Code', 'Consignee Code']:
+           extract_col = f'{col}_extract'
+           # if extractor gave a value, keep it; otherwise fall back to address-based value
+           accrual_df[col] = accrual_df[extract_col].where(
+               accrual_df[extract_col].notna() & (accrual_df[extract_col] != ""),
+               accrual_df[col]
+           )
+       accrual_df.drop(columns=['Consignor Code_extract', 'Consignee Code_extract'], inplace=True)
        # --- Clean up the codes ---
        formatter = CodeFormatter()
        accrual_df = formatter.pad_codes(accrual_df, 'Consignor Code', 'Consignee Code')
