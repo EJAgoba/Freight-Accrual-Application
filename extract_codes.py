@@ -13,7 +13,7 @@ class Extractor:
 
     Handles code extraction logic:
 
-      - Ensure Consignor/Consignee code columns exist
+      - Ensure Consignor/Consignee *Code* and *Type* columns exist
 
       - Apply Origin/Dest Type Code priority
 
@@ -31,7 +31,15 @@ class Extractor:
 
     def create_columns(self, df: pd.DataFrame) -> None:
 
-        for col in ["Consignor Code", "Consignee Code"]:
+        """
+
+        Make sure all the columns the pipeline expects exist.
+
+        """
+
+        for col in ["Consignor Code", "Consignee Code",
+
+                    "Consignor Type", "Consignee Type"]:
 
             if col not in df.columns:
 
@@ -273,5 +281,3 @@ class Extractor:
 
         return df
  
-
-
