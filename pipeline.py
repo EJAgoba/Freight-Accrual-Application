@@ -42,7 +42,7 @@ class PipelineRunner:
        extractor = Extractor()
        extractor.create_columns(accrual_df)
        extractor.lower_columns(accrual_df, 'Consignor', 'Consignee')
-       extractor.prefill_from_loc_columns(accrual_df)
+       extractor.prefill_from_loc_columns(accrual_df, location_codes)
        extractor.extract1(accrual_df, 'Consignor', 'Consignor Code', location_codes, only_null=True)
        extractor.extract1(accrual_df, 'Consignee', 'Consignee Code', location_codes, only_null=True)
        # --- Combined Address ---
