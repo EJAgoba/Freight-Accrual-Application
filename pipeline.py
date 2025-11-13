@@ -26,14 +26,14 @@ def run_pipeline(accrual_df: pd.DataFrame,
        df_column="Consignor",
        new_column="Consignor Code",
        location_codes=location_codes,
-       only_null=False
+       only_null=True
    )
    extractor.extract1(
        accrual_df,
        df_column="Consignee",
        new_column="Consignee Code",
        location_codes=location_codes,
-       only_null=False
+       only_null=True
    )
    # ----------------------------------------------------------
    # 3. Build Combined Address (for fallback only)
