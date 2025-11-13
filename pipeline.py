@@ -114,35 +114,49 @@ class PipelineRunner:
            },
            inplace=True,
        )
-       # ---------- 8) Account # EJ rule ----------
-       accrual_df["Account # EJ"] = accrual_df.apply(
-           lambda row: 621000
-           if "G59" in str(row.get("Profit Center EJ", ""))
-           else (
-               621000
-               if row.get("Consignee Code") == row.get("Assigned Location Code")
-               else 621020
-           ),
-           axis=1,
-       )
+       # ---------- 8) Account # EJ rule (avoid boolean NA) ----------
+       def _account_rule(row) -> int:
+           pc_ej = row.get("Profit Center EJ")
+           # case 1: any G59 profit center → 621000
+           if isinstance(pc_ej, str) and "G59" in pc_ej:
+               return 621000
+           cons_code = row.get("Consignee Code")
+           assigned = row.get("Assigned Location Code")
+           # normalize to strings only if not NA
+           if cons_code is None or cons_code is pd.NA:
+               cons_norm = None
+           else:
+               cons_norm = str(cons_code)
+           if assigned is None or assigned is pd.NA:
+               asg_norm = None
+           else:
+               asg_norm = str(assigned)
+           # case 2: consignee code == assigned loc code → 621000
+           if cons_norm is not None and asg_norm is not None and cons_norm == asg_norm:
+               return 621000
+           # otherwise 621020
+           return 621020
+       accrual_df["Account # EJ"] = accrual_df.apply(_account_rule, axis=1)
        # ---------- 9) De-dupe on Invoice Number + Paid Amount (if present) ----------
        if {"Invoice Number", "Paid Amount"}.issubset(accrual_df.columns):
            accrual_df = accrual_df.drop_duplicates(
                subset=["Invoice Number", "Paid Amount"]
            )
-       # ---------- 10) Automation accuracy ----------
+       # ---------- 10) Automation accuracy (avoid boolean NA) ----------
        if "Profit Center" in accrual_df.columns:
            accrual_df["Profit Center"] = accrual_df["Profit Center"].astype("string")
        accrual_df["Profit Center EJ"] = accrual_df["Profit Center EJ"].astype("string")
+       def _accuracy_rule(row) -> int:
+           pc = row.get("Profit Center")
+           pc_ej = row.get("Profit Center EJ")
+           # treat None / NA as "no match"
+           if pc is None or pc is pd.NA:
+               return 0
+           if pc_ej is None or pc_ej is pd.NA:
+               return 0
+           return 1 if str(pc) == str(pc_ej) else 0
        accrual_df["Automation Accuracy"] = accrual_df.apply(
-           lambda row: 1
-           if (
-               pd.notna(row.get("Profit Center"))
-               and pd.notna(row.get("Profit Center EJ"))
-               and row.get("Profit Center") == row.get("Profit Center EJ")
-           )
-           else 0,
-           axis=1,
+           _accuracy_rule, axis=1
        )
        # ---------- 11) Column ordering ----------
        first_cols = [
