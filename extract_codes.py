@@ -12,12 +12,12 @@ class Extractor:
        for c in cols:
            if c in df.columns:
                df[c] = df[c].astype(str).str.upper()
-    def apply_type_code_priority(self, df):
+    def prefill_from_loc_columns(self, df):
        """
        Priority 1: Use Origin Type Code and Dest Type Code directly.
        """
-       if "Origin Type Code" in df.columns:
-           df["Consignor Code"] = df["Origin Type Code"].astype(str).str.strip().replace({"": None})
+       if "Org Type Code" in df.columns:
+           df["Consignor Code"] = df["Org Type Code"].astype(str).str.strip().replace({"": None})
        if "Dest Type Code" in df.columns:
            df["Consignee Code"] = df["Dest Type Code"].astype(str).str.strip().replace({"": None})
        return df
@@ -55,3 +55,4 @@ class Extractor:
        )
        return df
     
+
