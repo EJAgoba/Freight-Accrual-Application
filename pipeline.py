@@ -78,14 +78,12 @@ class PipelineRunner:
        accrual_df = merger.merge(
            accrual_df,
            cintas_location_table,
-           "Consignor Code",
-           overwrite=False,
+           "Consignor Code"
        )
        accrual_df = merger.merge(
            accrual_df,
            cintas_location_table,
-          "Consignee Code",
-           overwrite=False,
+          "Consignee Code"
        )
        # ---------- 4. Clean code formatting ----------
        formatter = CodeFormatter()
