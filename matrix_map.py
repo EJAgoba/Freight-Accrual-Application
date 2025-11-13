@@ -57,12 +57,8 @@ class MatrixMapper:
        if consignee_code in SPECIAL_CODES:
            return consignee_code
        # --- 3️⃣ 67N rule ---
-      if (
-          consignee_code in LOCATION_CODES_67N
-          and origin_address.startswith("570 MATH")
-          and not any(code in consignor.lower() for code in ['cintas 0897', '0897', '897'])
-      ):
-          return "067N"
+       if consignee_code in LOCATION_CODES_67N and origin_address.startswith("570 MATH") and not any(code in consignor.lower() for code in ['cintas 0897', '0897', '897']):
+           return "067N"
 
        --- 4️⃣ 97H rule ---
        if consignee_code in LOCATION_CODES_97H:
@@ -107,6 +103,7 @@ def audit_missing_type_pairs(df: pd.DataFrame) -> pd.DataFrame:
        .reset_index(name="count")
        .sort_values("count", ascending=False)
    )
+
 
 
 
