@@ -88,21 +88,22 @@ class MatrixMapper:
        # --- 7️⃣ Default ---
        return pd.NA
 
-# # --- Optional diagnostic to find unmapped pairs ---
-# def audit_missing_type_pairs(df: pd.DataFrame) -> pd.DataFrame:
-#    """Show type pairs that produced NA Assigned Location Code."""
-#    if "Assigned Location Code" not in df.columns:
-#        return pd.DataFrame()
-#    mask = df["Assigned Location Code"].isna()
-#    cols = ["Consignor Type", "Consignee Type"]
-#    if not set(cols).issubset(df.columns):
-#        return pd.DataFrame()
-#    return (
-#        df.loc[mask, cols]
-#        .applymap(_norm)
-#        .value_counts()
-#        .reset_index(name="count")
-#        .sort_values("count", ascending=False)
-#    )
+# --- Optional diagnostic to find unmapped pairs ---
+def audit_missing_type_pairs(df: pd.DataFrame) -> pd.DataFrame:
+   """Show type pairs that produced NA Assigned Location Code."""
+   if "Assigned Location Code" not in df.columns:
+       return pd.DataFrame()
+   mask = df["Assigned Location Code"].isna()
+   cols = ["Consignor Type", "Consignee Type"]
+   if not set(cols).issubset(df.columns):
+       return pd.DataFrame()
+   return (
+       df.loc[mask, cols]
+       .applymap(_norm)
+       .value_counts()
+       .reset_index(name="count")
+       .sort_values("count", ascending=False)
+   )
+
 
 
