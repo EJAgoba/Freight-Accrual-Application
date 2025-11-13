@@ -1,14 +1,8 @@
 from pathlib import Path
 # === Reference file names (next to app.py) ===
 CINTAS_LOCATION_TABLE_FILE = "MY LOCATION TABLE.xlsx"
-COMPLETE_LOCATION_TABLE_FILE = "Coding_CintasLocation 02.06.25.xlsx"
-LOCATION_CODES_CANDIDATES = [
-   "Location Codes.xlsx",
-   "LOCATION_CODES.xlsx",
-   "location_codes.xlsx",
-   "LocationCodes.xlsx",
-   "all_location_codes.xlsx",
-]
+COMPLETE_LOCATION_TABLE_FILE = "Coding_CintasLocation 11.05.25.xlsx"
+LOCATION_CODES_CANDIDATES = "all_location_codes.xlsx"
 # constants.py
 APP_TITLE = "Cintas Logistics — Accrual Re-Coding"
 # Fresh palette (Tailwind-inspired)
