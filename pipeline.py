@@ -1,10 +1,13 @@
 # pipeline.py
 import pandas as pd
+import streamlit as st  # <--- add for debug UI
 from address_merge import CombinedAddress
 from address_crossref import Merger
 from clean_codes import CodeFormatter
 from map_types import TypeMapper, TypeCleaner
 from matrix_map import MatrixMapper
+
+DEBUG = True   # flip to False when done
 
 class PipelineRunner:
    """Accrual re-coding pipeline with:
@@ -16,9 +19,11 @@ class PipelineRunner:
        accrual_df: pd.DataFrame,
        cintas_location_table: pd.DataFrame,
        complete_location_table: pd.DataFrame,
-       location_codes_df: pd.DataFrame,   # <- now a DataFrame, not list[str]
+       location_codes_df: pd.DataFrame,   # <-- DF with 'Code' column
    ) -> pd.DataFrame:
-       # ========= 1. Prepare and clean Location Codes list =========
+       # ========= 1. Prep Location Codes =========
+       if "Code" not in location_codes_df.columns:
+           raise ValueError("location_codes_df must contain a 'Code' column.")
        codes_series = (
            location_codes_df["Code"]
            .dropna()
@@ -27,8 +32,12 @@ class PipelineRunner:
            .str.upper()
            .unique()
        )
+       if DEBUG:
+           st.write("🔎 DEBUG – Location codes loaded:")
+           st.write("Count:", len(codes_series))
+           st.write("First 30 codes:", list(codes_series[:30]))
+       # helper: find first code that appears inside the text
        def find_code_in_text(text: object) -> str | None:
-           """Return the first code found inside the given text (case-insensitive)."""
            t = str(text or "").upper()
            if not t:
                return None
@@ -36,13 +45,30 @@ class PipelineRunner:
                if code and code in t:
                    return code
            return None
-       # Make sure our code columns exist
+       # ========= 2. DEBUG: test matching on a few rows =========
+       if DEBUG:
+           st.write("🔎 DEBUG – Sample Consignor text → code match")
+           sample = accrual_df[["Consignor", "Consignee"]].head(15)
+           debug_rows = []
+           for idx, row in sample.iterrows():
+               cons = row["Consignor"]
+               cons_code = find_code_in_text(cons)
+               dest = row["Consignee"]
+               dest_code = find_code_in_text(dest)
+               debug_rows.append({
+                   "row_index": idx,
+                   "Consignor": cons,
+                   "Consignor_match": cons_code,
+                   "Consignee": dest,
+                   "Consignee_match": dest_code,
+               })
+           st.dataframe(pd.DataFrame(debug_rows))
+       # ========= 3. Ensure code columns exist =========
        if "Consignor Code" not in accrual_df.columns:
            accrual_df["Consignor Code"] = pd.NA
        if "Consignee Code" not in accrual_df.columns:
            accrual_df["Consignee Code"] = pd.NA
-       # ========= 2. FIRST: Try to pull codes from Consignor / Consignee text =========
-       # Only fill where currently blank so we don't overwrite anything prefilled
+       # ========= 4. FIRST PASS: extract from Consignor / Consignee text =========
        cons_mask = (
            accrual_df["Consignor Code"].isna()
            | (accrual_df["Consignor Code"].astype(str).str.strip() == "")
@@ -57,9 +83,16 @@ class PipelineRunner:
        accrual_df.loc[dest_mask, "Consignee Code"] = (
            accrual_df.loc[dest_mask, "Consignee"].apply(find_code_in_text)
        )
-       # Save what we got from this step so we can protect it later
+       if DEBUG:
+           st.write("🔎 DEBUG – After first pass of text extraction:")
+           st.write(
+               accrual_df[["Consignor", "Consignor Code", "Consignee", "Consignee Code"]]
+               .head(20)
+           )
+       # Save for later so the address merge doesn’t overwrite these
        extracted_consignor = accrual_df["Consignor Code"].copy()
        extracted_consignee = accrual_df["Consignee Code"].copy()
+
        # ========= 3. Build Combined Address fields =========
        combined_address = CombinedAddress()
        combined_address.create_combined_address_accrual(
