@@ -133,9 +133,9 @@ class Extractor:
 
         """
 
-        if "Origin Type Code" in df.columns:
+        if "Org Type Code" in df.columns:
 
-            origin = df["Origin Type Code"].astype(str).str.strip()
+            origin = df["Org Type Code"].astype(str).str.strip()
 
             df["Consignor Code"] = origin.replace({"": None})
 
@@ -273,3 +273,4 @@ class Extractor:
 
         return df
  
+
