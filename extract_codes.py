@@ -8,11 +8,11 @@ class Extractor:
         df['Consignee Type'] = df['Consignee Type'].astype(str).str.strip().str.upper()
         df['Consignor Code'] = df['Consignor Code'].astype(str).str.strip().str.upper()
         df['Consignee Code'] = df['Consignee Code'].astype(str).str.strip().str.upper()
-   def lower_columns(self, df, *cols):
+    def lower_columns(self, df, *cols):
        for c in cols:
            if c in df.columns:
                df[c] = df[c].astype(str).str.upper()
-   def apply_type_code_priority(self, df):
+    def apply_type_code_priority(self, df):
        """
        Priority 1: Use Origin Type Code and Dest Type Code directly.
        """
@@ -21,8 +21,8 @@ class Extractor:
        if "Dest Type Code" in df.columns:
            df["Consignee Code"] = df["Dest Type Code"].astype(str).str.strip().replace({"": None})
        return df
-   # STRICT extractor — no partial matches
-   def extract_code_from_string(self, text, codes_df):
+    # STRICT extractor — no partial matches
+    def extract_code_from_string(self, text, codes_df):
        if text is None:
            return None
        text = str(text).upper()
@@ -31,7 +31,7 @@ class Extractor:
            if re.search(rf"\b{re.escape(code)}\b", text):
                return code
        return None
-   def extract_from_consignor_consignee(self, df, codes_df):
+    def extract_from_consignor_consignee(self, df, codes_df):
        """
        Only fill codes where still blank OR marked as third party.
        """
@@ -54,3 +54,4 @@ class Extractor:
            axis=1,
        )
        return df
+    
