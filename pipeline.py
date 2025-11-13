@@ -76,21 +76,21 @@ class PipelineRunner:
        # 4. Combined Address (unchanged)
        # ===============================================================
        comb = CombinedAddress()
-       comb.create_combined_address_accrual(
+       comb.create(
            cintas_location_table,
            "Combined Address",
            "Loc_Address",
            "Loc_City",
            "Loc_ST",
        )
-       comb.create_combined_address_accrual(
+       comb.create(
            accrual_df,
            "Consignee Combined Address",
            "Dest Address1",
            "Dest City",
            "Dest State Code",
        )
-       comb.create_combined_address_accrual(
+       comb.create(
            accrual_df,
            "Consignor Combined Address",
            "Origin Addresss",
