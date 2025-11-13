@@ -1,66 +1,275 @@
+# extract_codes.py
+
+import pandas as pd
+
 import re
-import numpy as np
+
+from typing import Iterable
+
 
 class Extractor:
-    def create_columns(self, df):
-        df[['Consignor Code', 'Consignor Type', 'Consignee Code', 'Consignee Type']] = ""
-        df['Consignor Type'] = df['Consignor Type'].astype(str).str.strip().str.upper()
-        df['Consignee Type'] = df['Consignee Type'].astype(str).str.strip().str.upper()
-        df['Consignor Code'] = df['Consignor Code'].astype(str).str.strip().str.upper()
-        df['Consignee Code'] = df['Consignee Code'].astype(str).str.strip().str.upper()
 
-    def lower_columns(self, df, *columns):
-        for c in columns:
-            if c in df:
-                df[c] = df[c].astype(str).str.lower()
+    """
 
-    def _normalize_set(self, codes):
-        # build a fast membership set for location codes
-        return set(str(x).strip().upper() for x in codes if str(x).strip() != '')
+    Handles code extraction logic:
 
-    def prefill_from_loc_columns(self, df, location_codes,
-                                 org_col='Org Type Code', dest_col='Dest Type Code'):
-        """Prefill Consignor/Consignee Code from Org/Dest loc columns if present & valid."""
-        locset = self._normalize_set(location_codes)
+      - Ensure Consignor/Consignee code columns exist
 
-        has_org = org_col in df.columns
-        has_dest = dest_col in df.columns
+      - Apply Origin/Dest Type Code priority
 
-        if has_org:
-            org_vals = df[org_col].astype(str).str.strip().str.upper()
-            mask_org_valid = org_vals.isin(locset)
-            df.loc[mask_org_valid, 'Consignor Code'] = org_vals
+      - Extract codes from Consignor/Consignee text
 
-        if has_dest:
-            dest_vals = df[dest_col].astype(str).str.strip().str.upper()
-            mask_dest_valid = dest_vals.isin(locset)
-            df.loc[mask_dest_valid, 'Consignee Code'] = dest_vals
-        
+        using a flexible codes_df (supports 'Code', 'Codes', etc.)
 
-        return has_org or has_dest
+    """
 
-    def extract1(self, df, df_column, new_column, location_codes, only_null=False):
-        """Your existing extract1 logic; optionally only for rows where new_column is blank."""
-        if df_column in df:
-            df[df_column] = df[df_column].astype(str).str.lower()
+    def __init__(self):
 
-        locset = [re.escape(str(x)).lower() for x in location_codes]
-        search_pattern = r'\b(' + '|'.join(locset) + r')\b'  # whole-word match
+        self._code_col_cache: str | None = None
 
-        base_mask = df[df_column].astype(str).str.contains(search_pattern, case=False, na=False)
-        if only_null:
-            null_mask = df[new_column].replace('', np.nan).isna()
-            mask = base_mask & null_mask
-        else:
-            mask = base_mask
+    # ---------- basic column helpers ----------
 
-        # Extract first matching code
-        df.loc[mask, new_column] = (
-            df.loc[mask, df_column]
-              .astype(str)
-              .str.extract(search_pattern, expand=False)
-              .str.upper()
+    def create_columns(self, df: pd.DataFrame) -> None:
+
+        for col in ["Consignor Code", "Consignee Code"]:
+
+            if col not in df.columns:
+
+                df[col] = None
+
+    def lower_columns(self, df: pd.DataFrame, *cols: str) -> None:
+
+        for c in cols:
+
+            if c in df.columns:
+
+                df[c] = df[c].astype(str).str.upper()
+
+    # ---------- codes_df handling ----------
+
+    def _get_codes_series(self, codes) -> pd.Series:
+
+        """
+
+        Accepts:
+
+          - a DataFrame with column 'Code'/'Codes'/etc.
+
+          - OR a simple iterable list of codes.
+
+        Returns uppercase, stripped Series of codes.
+
+        """
+
+        if isinstance(codes, pd.DataFrame):
+
+            if self._code_col_cache and self._code_col_cache in codes.columns:
+
+                col = self._code_col_cache
+
+            else:
+
+                possible_cols = ["Code", "Codes", "Loc Code", "Loc_Code", "Location Code"]
+
+                col = next((c for c in possible_cols if c in codes.columns), None)
+
+                if col is None:
+
+                    raise KeyError(
+
+                        f"codes_df must contain one of {possible_cols}. "
+
+                        f"Found: {list(codes.columns)}"
+
+                    )
+
+                self._code_col_cache = col
+
+            series = (
+
+                codes[col]
+
+                .dropna()
+
+                .astype(str)
+
+                .str.upper()
+
+                .str.strip()
+
+            )
+
+            series = series[series != ""]
+
+            return series
+
+        # If not a DataFrame, assume it's a plain iterable of codes
+
+        if isinstance(codes, Iterable) and not isinstance(codes, (str, bytes)):
+
+            return pd.Series(list(codes), dtype="string").str.upper().str.strip()
+
+        raise TypeError(
+
+            "codes must be a pandas DataFrame or iterable of codes. "
+
+            f"Got {type(codes)}"
+
         )
 
-        # normalize empties to NaN
-        df[new_column] = df[new_column].replace('', np.nan)
+    # ---------- priority 1: Origin / Dest Type Code ----------
+
+    def apply_type_code_priority(self, df: pd.DataFrame) -> pd.DataFrame:
+
+        """
+
+        Priority 1:
+
+          - Origin Type Code -> Consignor Code
+
+          - Dest Type Code   -> Consignee Code
+
+        (only if these columns exist)
+
+        """
+
+        if "Origin Type Code" in df.columns:
+
+            origin = df["Origin Type Code"].astype(str).str.strip()
+
+            df["Consignor Code"] = origin.replace({"": None})
+
+        if "Dest Type Code" in df.columns:
+
+            dest = df["Dest Type Code"].astype(str).str.strip()
+
+            df["Consignee Code"] = dest.replace({"": None})
+
+        return df
+
+    # ---------- text extraction ----------
+
+    @staticmethod
+
+    def _needs_fill(code_val, type_val) -> bool:
+
+        """
+
+        We try to extract from text if:
+
+          - code is blank/None
+
+          - OR type is blank
+
+          - OR type contains 'THIRD' (third party)
+
+        """
+
+        code_str = "" if code_val is None else str(code_val).strip()
+
+        type_str = "" if type_val is None else str(type_val).upper().strip()
+
+        if code_str == "" or type_str == "" or "THIRD" in type_str:
+
+            return True
+
+        return False
+
+    @staticmethod
+
+    def _extract_from_text(text: object, codes_series: pd.Series) -> str | None:
+
+        """
+
+        Strict matching: full token match only.
+
+        No partial matches (e.g. '67' will not match inside '67N').
+
+        """
+
+        if text is None:
+
+            return None
+
+        t = str(text).upper()
+
+        tokens = re.findall(r"[A-Z0-9]+", t)
+
+        # Check longer codes first so '067N' wins over '67'
+
+        for code in sorted(codes_series.unique(), key=len, reverse=True):
+
+            if code in tokens:
+
+                return code
+
+        return None
+
+    def extract_from_consignor_consignee(
+
+        self,
+
+        df: pd.DataFrame,
+
+        codes_df,
+
+    ) -> pd.DataFrame:
+
+        """
+
+        Priority 2:
+
+          - For rows where code still needs fill (see _needs_fill),
+
+            search Consignor/Consignee text for a code in codes_df.
+
+        """
+
+        codes_series = self._get_codes_series(codes_df)
+
+        # Consignor
+
+        if "Consignor" in df.columns:
+
+            df["Consignor Code"] = df.apply(
+
+                lambda row: self._extract_from_text(row["Consignor"], codes_series)
+
+                if self._needs_fill(
+
+                    row.get("Consignor Code"),
+
+                    row.get("Consignor Type", ""),
+
+                )
+
+                else row.get("Consignor Code"),
+
+                axis=1,
+
+            )
+
+        # Consignee
+
+        if "Consignee" in df.columns:
+
+            df["Consignee Code"] = df.apply(
+
+                lambda row: self._extract_from_text(row["Consignee"], codes_series)
+
+                if self._needs_fill(
+
+                    row.get("Consignee Code"),
+
+                    row.get("Consignee Type", ""),
+
+                )
+
+                else row.get("Consignee Code"),
+
+                axis=1,
+
+            )
+
+        return df
+ 
