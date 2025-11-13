@@ -63,7 +63,7 @@ class MatrixMapper:
        ):
            return "067N"
        # --- 4️⃣ 97H rule ---
-       if consignee_code in LOCATION_CODES_97H:
+       elif consignee_code in LOCATION_CODES_97H:
            return "097H"
        # --- 5️⃣ Matrix-driven logic ---
        key = (consignor_type, consignee_type)
@@ -104,6 +104,7 @@ def audit_missing_type_pairs(df: pd.DataFrame) -> pd.DataFrame:
        .reset_index(name="count")
        .sort_values("count", ascending=False)
    )
+
 
 
 
