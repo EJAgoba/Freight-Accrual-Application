@@ -18,6 +18,8 @@ class PipelineRunner:
      7) Matrix mapping (Assigned Location Code)
      8) Join profit/cost centers
      9) Account # EJ rule
+    10) De-duplicate rows
+    11) Automation Accuracy + column ordering
    """
    def run(
        self,
@@ -27,6 +29,7 @@ class PipelineRunner:
        location_codes_df: pd.DataFrame,
    ) -> pd.DataFrame:
        extractor = Extractor()
+       # Make sure Code/Type columns exist
        extractor.create_columns(accrual_df)
        extractor.lower_columns(accrual_df, "Consignor", "Consignee")
        # ---------- 1. Origin/Dest Type Code priority ----------
@@ -110,4 +113,34 @@ class PipelineRunner:
            else 621020,
            axis=1,
        )
+       # ---------- 10. De-duplicate rows ----------
+       # Drop duplicates only if both columns exist
+       if {"Invoice Number", "Paid Amount"}.issubset(accrual_df.columns):
+           accrual_df = accrual_df.drop_duplicates(
+               subset=["Invoice Number", "Paid Amount"]
+           )
+       # ---------- 11. Automation Accuracy + column ordering ----------
+       # Automation Accuracy: 1 when Profit Center == Profit Center EJ, else 0
+       if {"Profit Center", "Profit Center EJ"}.issubset(accrual_df.columns):
+           pc = accrual_df["Profit Center"].astype("string")
+           pc_ej = accrual_df["Profit Center EJ"].astype("string")
+           match = (pc == pc_ej) & pc.notna() & pc_ej.notna()
+           accrual_df["Automation Accuracy"] = match.astype(int)
+       else:
+           accrual_df["Automation Accuracy"] = 0
+       # Order key columns at the front if present
+       first_cols = [
+           "Profit Center",
+           "Cost Center",
+           "Account #",
+           "Automation Accuracy",
+           "Profit Center EJ",
+           "Cost Center EJ",
+           "Account # EJ",
+       ]
+       ordered_cols = (
+           [c for c in first_cols if c in accrual_df.columns]
+           + [c for c in accrual_df.columns if c not in first_cols]
+       )
+       accrual_df = accrual_df[ordered_cols]
        return accrual_df
