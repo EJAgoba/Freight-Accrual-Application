@@ -9,6 +9,7 @@ LOCATION_CODES_67N = {
    '055N', '060N', '0827', '0839', '0847', '0850', '0851', '0857', '0881', '0882', '0884',
    '0885', '0886', '0888', '0889', '0903', '0951', '0W17'
 }
+# Add 897 logic
 # Location codes for 97H
 LOCATION_CODES_97H = {'029G', '030G', '031G'}
 
@@ -31,7 +32,7 @@ class MatrixMapper:
            if isinstance(v, str) and v.strip():
                return v.strip().lower()
        return ""
-   def determine_profit_center(self, row: pd.Series) -> str | pd.NA:
+   def determine_profit_center(self, row: pd.Series):
        # --- Pull & normalize fields ---
        consignor = _norm(row.get("Consignor"))
        consignee = _norm(row.get("Consignee"))
@@ -41,6 +42,9 @@ class MatrixMapper:
        consignor_type = _norm(row.get("Consignor Type"))
        consignee_type = _norm(row.get("Consignee Type"))
        carrier_lc = self._get_carrier(row)
+       consignor_lower = consignor.lower()
+       if "matheson" in consignor_lower and "fs" in consignor_lower:
+           return "067N"
        # --- 1️⃣ Carrier override: Omnitrans = always charge to DESTINATION ---
        if carrier_lc == "omnitrans":
            return consignee_code or pd.NA
@@ -55,6 +59,7 @@ class MatrixMapper:
        if (
            consignee_code in LOCATION_CODES_67N
            and origin_address.startswith("570 MATH")
+           and not any(code in consignor.lower() for code in ['cintas 0897', '0897', '897'])
        ):
            return "067N"
        # --- 4️⃣ 97H rule ---
