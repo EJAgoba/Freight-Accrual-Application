@@ -21,6 +21,8 @@ class MatrixMapper:
             return "0896"
         if isinstance(row.get("Consignor"), str) and 'coopetrajes' in row['Consignor'].lower():
             return "0896"
+        if isinstance(row.get("Consignor"), str) and "matheson" and "fs" in row['Consignor'].lower():
+            return "067N"
         if row['Consignee Code'] in SPECIAL_CODES:
             return row['Consignee Code']
 
@@ -44,3 +46,4 @@ class MatrixMapper:
                 return row['Consignee Code']
 
         return 'UNKNOWN'
+
