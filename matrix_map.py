@@ -25,7 +25,7 @@ class MatrixMapper:
             return "067N"
         if row['Consignee Code'] in SPECIAL_CODES:
             return row['Consignee Code']
-        if isinstance(row.get("Carrier Name"), str) and "omnitrans" and "fs" in row['Carrier Name'].lower():
+        if isinstance(row.get("Carrier Name"), str) and "omnitrans" in row['Carrier Name'].lower():
             return row['Consignee Code']
 
         # ✅ Condition for 67N
@@ -48,5 +48,6 @@ class MatrixMapper:
                 return row['Consignee Code']
 
         return 'UNKNOWN'
+
 
 
