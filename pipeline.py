@@ -145,7 +145,7 @@ class PipelineRunner:
 
         # ===============================================================
 
-        if "Org Type Code" in accrual_df.columns:
+        if "Org Type Code" in accrual_df.columns and accrual_df['Carrier Name].lower() != "omnitrans":
 
             mask = accrual_df["Org Type Code"].notna() & (
 
@@ -159,7 +159,7 @@ class PipelineRunner:
 
             )
 
-        if "Dest Type Code" in accrual_df.columns:
+        if "Dest Type Code" in accrual_df.columns and accrual_df['Carrier Name].lower() != "omnitrans":
 
             mask = accrual_df["Dest Type Code"].notna() & (
 
