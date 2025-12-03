@@ -147,7 +147,7 @@ class PipelineRunner:
 
         if "Org Type Code" in accrual_df.columns:
 
-            mask = accrual_df["Org Type Code"].notna() & (accrual_df["Org Type Code"].astype(str).str.strip() != "") & (accrual_df["Carrier Name"].str.lower() != "omnitrans")
+            mask = (accrual_df["Org Type Code"].notna() & (accrual_df["Org Type Code"].astype(str).str.strip() != "") & (accrual_df["Carrier Name"].str.lower() != "omnitrans")
             )
 
             accrual_df.loc[mask, "Consignor Code"] = (
@@ -158,7 +158,7 @@ class PipelineRunner:
 
         if "Dest Type Code" in accrual_df.columns:
 
-            mask = accrual_df["Dest Type Code"].notna() & (accrual_df["Dest Type Code"].astype(str).str.strip() != "") & (accrual_df["Carrier Name"].str.lower() != "omnitrans")
+            mask = (accrual_df["Dest Type Code"].notna() & (accrual_df["Dest Type Code"].astype(str).str.strip() != "") & (accrual_df["Carrier Name"].str.lower() != "omnitrans")
             )
 
             accrual_df.loc[mask, "Consignee Code"] = (
